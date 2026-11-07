@@ -14,13 +14,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-// Kita pakai Activity biasa, bukan AppCompatActivity
 public class MainActivity extends Activity { 
 
     private TextView statusText;
     private Handler handler = new Handler(Looper.getMainLooper());
-    
-    // ⚠️ GANTI IP INI KALAU PERLU ⚠️
     private static final String SERVER_URL = "http://127.0.0.1:5000/api/update"; 
 
     @Override
@@ -59,17 +56,34 @@ public class MainActivity extends Activity {
     }
 
     private int getBatteryLevel() {
-        BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
-        return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+        try {
+            BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
+            if (bm != null) {
+                return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            }
+        } catch (Exception e) {
+            return -1; // Kalau gagal ambil baterai
+        }
+        return 0;
     }
 
     private String getNetworkType() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
-        if (nc == null) return "Offline";
-        if (nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return "WiFi";
-        if (nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) return "Data Seluler";
-        return "Lainnya";
+        try {
+            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return "Error";
+            
+            android.net.Network activeNetwork = cm.getActiveNetwork();
+            if (activeNetwork == null) return "Offline"; // Kalau nggak ada internet sama sekali
+            
+            NetworkCapabilities nc = cm.getNetworkCapabilities(activeNetwork);
+            if (nc == null) return "Unknown";
+            
+            if (nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return "WiFi";
+            if (nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) return "Data Seluler";
+            return "Lainnya";
+        } catch (Exception e) {
+            return "Error Jaringan";
+        }
     }
 
     private void sendDataToServer(int battery, String network) {
@@ -79,6 +93,7 @@ public class MainActivity extends Activity {
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setDoOutput(true);
+            conn.setConnectTimeout(5000); // Kasih waktu 5 detik buat konek
 
             String jsonInputString = String.format("{\"battery\": %d, \"network\": \"%s\"}", battery, network);
 
