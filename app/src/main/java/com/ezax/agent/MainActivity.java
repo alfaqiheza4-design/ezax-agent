@@ -7,7 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.appcompat.app.AppCompatActivity;
+import android.app.Activity
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
