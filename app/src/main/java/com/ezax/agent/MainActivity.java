@@ -7,14 +7,14 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import androidx.appcompat.app.AppCompatActivity;
+import android.appcompat.app.AppCompatActivity;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     // ⚠️ GANTI IP INI dengan IP Laptop kamu (cek di terminal Flask: Running on http://192.168.x.x:5000)
     private static final String SERVER_URL = "http://192.168.1.46:5000"; 
     private static final String DEVICE_ID = "hp_target_1"; 
