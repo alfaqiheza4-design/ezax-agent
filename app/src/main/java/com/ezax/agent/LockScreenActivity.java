@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class LockScreenActivity extends Activity {
 
@@ -31,6 +32,7 @@ public class LockScreenActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
 
+        // Kiosk Mode
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             startLockTask(); 
         }
@@ -42,14 +44,18 @@ public class LockScreenActivity extends Activity {
         tvPinDisplay = findViewById(R.id.tv_pin_display);
 
         if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
-        if (getIntent().hasExtra("PIN")) correctPin = getIntent().getStringExtra("PIN");
+        if (getIntent().hasExtra("PIN")) correctPin = getIntent().getStringExtra("PIN").trim();
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
+
+        // Tampilkan pesan PIN yang benar buat ngecek (Hapus baris ini kalau udah production)
+        // Toast.makeText(this, "PIN Asli: " + correctPin, Toast.LENGTH_LONG).show();
 
         setupKeypad();
         startTimer();
     }
 
     private void setupKeypad() {
+        // Binding tombol 0-9
         int[] btnIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4, R.id.btn_5, R.id.btn_6, R.id.btn_7, R.id.btn_8, R.id.btn_9};
         for (int i = 0; i < btnIds.length; i++) {
             final String number = String.valueOf(i);
@@ -61,6 +67,8 @@ public class LockScreenActivity extends Activity {
                 }
             });
         }
+
+        // Binding tombol Hapus (Backspace)
         findViewById(R.id.btn_del).setOnClickListener(v -> {
             if (inputPin.length() > 0) {
                 inputPin.deleteCharAt(inputPin.length() - 1);
@@ -76,12 +84,17 @@ public class LockScreenActivity extends Activity {
     }
 
     private void checkPin() {
+        // Jika panjang input sudah sama dengan PIN asli
         if (inputPin.length() == correctPin.length()) {
             if (inputPin.toString().equals(correctPin)) {
+                // PIN Benar
+                Toast.makeText(this, "PIN BENAR! Membuka...", Toast.LENGTH_SHORT).show();
                 if (countDownTimer != null) countDownTimer.cancel();
                 finish(); 
             } else {
-                inputPin.setLength(0);
+                // PIN Salah
+                Toast.makeText(this, "PIN SALAH!", Toast.LENGTH_SHORT).show();
+                inputPin.setLength(0); // Reset
                 updatePinDisplay();
             }
         }
@@ -98,7 +111,9 @@ public class LockScreenActivity extends Activity {
                     tvTimer.setText(String.format("DIBUKA DALAM : %02d:%02d:%02d", hours, minutes, seconds));
                 }
                 @Override
-                public void onFinish() { finish(); }
+                public void onFinish() { 
+                    finish(); 
+                }
             }.start();
         } else {
             tvTimer.setText("DIBUKA DALAM : PERMANEN");

