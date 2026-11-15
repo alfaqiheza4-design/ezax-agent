@@ -12,11 +12,11 @@
         android:padding="16dp"
         android:gravity="center_horizontal">
 
-        <!-- Judul: DEVICE LOCKED (Naik ke atas) -->
+        <!-- Judul: DEVICE LOCKED + Tengkorak -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="DEVICE LOCKED"
+            android:text="💀 DEVICE LOCKED 💀"
             android:textColor="#FFFFFF"
             android:textSize="26sp"
             android:textStyle="bold"
@@ -49,15 +49,15 @@
             android:fontFamily="monospace"
             android:layout_marginBottom="30dp" />
 
-        <!-- Kotak PIN -->
+        <!-- Kotak PIN (Udah dikecilin lebarnya biar gak kepanjangan) -->
         <TextView
             android:id="@+id/tv_pin_display"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_width="260dp"
+            android:layout_height="45dp"
             android:background="#333333"
             android:text="*"
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:fontFamily="monospace"
             android:letterSpacing="0.5"
             android:gravity="center"
