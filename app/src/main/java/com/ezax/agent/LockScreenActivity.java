@@ -50,10 +50,6 @@ public class LockScreenActivity extends Activity {
         }
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
 
-        // --- DEBUGGING: Munculin Toast biar tau PIN yang masuk ---
-        // (Hapus baris ini kalau udah production)
-        Toast.makeText(this, "PIN Asli: " + correctPin, Toast.LENGTH_LONG).show();
-
         setupKeypad();
         startTimer();
     }
