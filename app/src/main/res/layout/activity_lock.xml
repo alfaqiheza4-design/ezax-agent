@@ -12,7 +12,6 @@
         android:padding="16dp"
         android:gravity="center_horizontal">
 
-        <!-- Judul: Tengkorak Kiri - Teks - Tengkorak Kanan (Biar sejajar) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -20,33 +19,11 @@
             android:gravity="center"
             android:layout_marginTop="80dp"
             android:layout_marginBottom="15dp">
-            
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="💀"
-                android:textSize="24sp"
-                android:layout_marginEnd="10dp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="DEVICE LOCKED"
-                android:textColor="#FFFFFF"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:fontFamily="monospace"
-                android:letterSpacing="0.1" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="💀"
-                android:textSize="24sp"
-                android:layout_marginStart="10dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💀" android:textSize="24sp" android:layout_marginEnd="10dp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DEVICE LOCKED" android:textColor="#FFFFFF" android:textSize="24sp" android:textStyle="bold" android:fontFamily="monospace" android:letterSpacing="0.1" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💀" android:textSize="24sp" android:layout_marginStart="10dp" />
         </LinearLayout>
 
-        <!-- Pesan Custom -->
         <TextView
             android:id="@+id/tv_pesan"
             android:layout_width="match_parent"
@@ -58,7 +35,6 @@
             android:gravity="center"
             android:layout_marginBottom="15dp" />
 
-        <!-- Timer / Permanen -->
         <TextView
             android:id="@+id/tv_timer"
             android:layout_width="wrap_content"
@@ -69,13 +45,12 @@
             android:fontFamily="monospace"
             android:layout_marginBottom="30dp" />
 
-        <!-- Kotak PIN -->
         <TextView
             android:id="@+id/tv_pin_display"
             android:layout_width="260dp"
             android:layout_height="45dp"
             android:background="#333333"
-            android:text="*"
+            android:text=""
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:fontFamily="monospace"
@@ -83,7 +58,6 @@
             android:gravity="center"
             android:layout_marginBottom="30dp" />
 
-        <!-- Keypad -->
         <GridLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -91,20 +65,19 @@
             android:rowCount="4"
             android:layout_marginBottom="10dp">
 
-            <Button android:text="1" style="@style/KeypadButton" />
-            <Button android:text="2" style="@style/KeypadButton" />
-            <Button android:text="3" style="@style/KeypadButton" />
-            <Button android:text="4" style="@style/KeypadButton" />
-            <Button android:text="5" style="@style/KeypadButton" />
-            <Button android:text="6" style="@style/KeypadButton" />
-            <Button android:text="7" style="@style/KeypadButton" />
-            <Button android:text="8" style="@style/KeypadButton" />
-            <Button android:text="9" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_1" android:text="1" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_2" android:text="2" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_3" android:text="3" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_4" android:text="4" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_5" android:text="5" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_6" android:text="6" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_7" android:text="7" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_8" android:text="8" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_9" android:text="9" style="@style/KeypadButton" />
             
-            <!-- Baris Bawah -->
             <Button android:text="" style="@style/KeypadButton" android:visibility="invisible"/>
-            <Button android:text="0" style="@style/KeypadButton" />
-            <Button android:text="⌫" style="@style/KeypadButton" android:textColor="#FFFFFF" />
+            <Button android:id="@+id/btn_0" android:text="0" style="@style/KeypadButton" />
+            <Button android:id="@+id/btn_del" android:text="⌫" style="@style/KeypadButton" android:textColor="#FFFFFF" />
 
         </GridLayout>
     </LinearLayout>

