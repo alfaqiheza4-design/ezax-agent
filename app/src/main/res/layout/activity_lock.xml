@@ -9,31 +9,22 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp"
+        android:padding="16dp"
         android:gravity="center_horizontal">
 
-        <!-- Ikon Peringatan -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="⚠️"
-            android:textColor="#FFFFFF"
-            android:textSize="70sp"
-            android:layout_marginTop="60dp"
-            android:layout_marginBottom="20dp" />
-
-        <!-- Judul: DEVICE LOCKED -->
+        <!-- Judul: DEVICE LOCKED (Naik ke atas) -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="DEVICE LOCKED"
             android:textColor="#FFFFFF"
-            android:textSize="32sp"
+            android:textSize="26sp"
             android:textStyle="bold"
             android:fontFamily="monospace"
             android:gravity="center"
             android:letterSpacing="0.1"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginTop="80dp"
+            android:layout_marginBottom="15dp" />
 
         <!-- Pesan Custom -->
         <TextView
@@ -42,35 +33,35 @@
             android:layout_height="wrap_content"
             android:text="PESAN CUSTOM"
             android:textColor="#FFFFFF"
-            android:textSize="18sp"
+            android:textSize="14sp"
             android:fontFamily="monospace"
             android:gravity="center"
-            android:layout_marginBottom="20dp" />
+            android:layout_marginBottom="15dp" />
 
-        <!-- Timer / Permanen (Nanti diubah lewat Java) -->
+        <!-- Timer / Permanen -->
         <TextView
             android:id="@+id/tv_timer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="DIBUKA DALAM : 00:59:59"
             android:textColor="#888888"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:fontFamily="monospace"
-            android:layout_marginBottom="40dp" />
+            android:layout_marginBottom="30dp" />
 
-        <!-- Kotak PIN (Abu-abu gelap) -->
+        <!-- Kotak PIN -->
         <TextView
             android:id="@+id/tv_pin_display"
             android:layout_width="match_parent"
-            android:layout_height="60dp"
+            android:layout_height="50dp"
             android:background="#333333"
             android:text="*"
             android:textColor="#FFFFFF"
-            android:textSize="24sp"
+            android:textSize="20sp"
             android:fontFamily="monospace"
             android:letterSpacing="0.5"
             android:gravity="center"
-            android:layout_marginBottom="40dp" />
+            android:layout_marginBottom="30dp" />
 
         <!-- Keypad -->
         <GridLayout
@@ -78,7 +69,7 @@
             android:layout_height="wrap_content"
             android:columnCount="3"
             android:rowCount="4"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="10dp">
 
             <Button android:text="1" style="@style/KeypadButton" />
             <Button android:text="2" style="@style/KeypadButton" />

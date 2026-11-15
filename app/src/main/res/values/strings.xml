@@ -1,14 +1,14 @@
 <resources>
     <string name="app_name">JaxRAT</string>
     
-    <!-- Style Keypad Minimalis (Tanpa Kotak, Font Putih Gede) -->
+    <!-- Style Keypad (Dikecilin) -->
     <style name="KeypadButton">
-        <item name="android:layout_width">90dp</item>
-        <item name="android:layout_height">90dp</item>
-        <item name="android:layout_margin">4dp</item>
+        <item name="android:layout_width">75dp</item>
+        <item name="android:layout_height">75dp</item>
+        <item name="android:layout_margin">2dp</item>
         <item name="android:background">@android:color/transparent</item>
         <item name="android:textColor">#FFFFFF</item>
-        <item name="android:textSize">36sp</item>
+        <item name="android:textSize">32sp</item>
         <item name="android:fontFamily">monospace</item>
     </style>
-</resources> 
+</resources>
