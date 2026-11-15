@@ -1,72 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#080808"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="[ SISTEM TERKUNCI ]"
-        android:textColor="#FF0000"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:fontFamily="monospace"
-        android:layout_marginTop="50dp"
-        android:layout_marginBottom="30dp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Nak, HP ini disita sementara. Belajar dulu ya!"
-        android:textColor="#00FF00"
-        android:textSize="18sp"
-        android:fontFamily="monospace"
-        android:gravity="center"
-        android:layout_marginBottom="20dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Sisa Waktu: 00:59:59"
-        android:textColor="#888888"
-        android:textSize="16sp"
-        android:fontFamily="monospace"
-        android:layout_marginBottom="40dp" />
+    android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="50dp">
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
 
-        <View android:layout_width="20dp" android:layout_height="20dp" android:background="#333333" android:layout_margin="10dp" />
-        <View android:layout_width="20dp" android:layout_height="20dp" android:background="#333333" android:layout_margin="10dp" />
-        <View android:layout_width="20dp" android:layout_height="20dp" android:background="#333333" android:layout_margin="10dp" />
-        <View android:layout_width="20dp" android:layout_height="20dp" android:background="#333333" android:layout_margin="10dp" />
+        <!-- Ikon Gembok -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="60sp"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="[ SISTEM TERKUNCI ]"
+            android:textColor="#FF0000"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:shadowColor="#FF0000"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="10"
+            android:layout_marginBottom="30dp" />
+
+        <!-- Pesan Custom -->
+        <TextView
+            android:id="@+id/tv_pesan"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nak, HP ini disita sementara. Belajar dulu ya!"
+            android:textColor="#00FF00"
+            android:textSize="18sp"
+            android:fontFamily="monospace"
+            android:gravity="center"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Timer -->
+        <TextView
+            android:id="@+id/tv_timer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sisa Waktu: 00:59:59"
+            android:textColor="#AAAAAA"
+            android:textSize="18sp"
+            android:fontFamily="monospace"
+            android:textStyle="bold"
+            android:layout_marginBottom="50dp" />
+
+        <!-- Kotak PIN (Neon Style) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="50dp">
+
+            <TextView android:layout_width="50dp" android:layout_height="60dp" android:background="@drawable/pin_box" android:layout_margin="8dp" />
+            <TextView android:layout_width="50dp" android:layout_height="60dp" android:background="@drawable/pin_box" android:layout_margin="8dp" />
+            <TextView android:layout_width="50dp" android:layout_height="60dp" android:background="@drawable/pin_box" android:layout_margin="8dp" />
+            <TextView android:layout_width="50dp" android:layout_height="60dp" android:background="@drawable/pin_box" android:layout_margin="8dp" />
+
+        </LinearLayout>
+
+        <!-- Keypad -->
+        <GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:columnCount="3"
+            android:rowCount="4"
+            android:layout_marginBottom="30dp">
+
+            <Button android:text="1" style="@style/KeypadButton" />
+            <Button android:text="2" style="@style/KeypadButton" />
+            <Button android:text="3" style="@style/KeypadButton" />
+            <Button android:text="4" style="@style/KeypadButton" />
+            <Button android:text="5" style="@style/KeypadButton" />
+            <Button android:text="6" style="@style/KeypadButton" />
+            <Button android:text="7" style="@style/KeypadButton" />
+            <Button android:text="8" style="@style/KeypadButton" />
+            <Button android:text="9" style="@style/KeypadButton" />
+            <Button android:text="" style="@style/KeypadButton" android:visibility="invisible"/>
+            <Button android:text="0" style="@style/KeypadButton" />
+            <Button android:text="⌫" style="@style/KeypadButton" android:textColor="#FF0000" />
+
+        </GridLayout>
     </LinearLayout>
-
-    <GridLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:columnCount="3"
-        android:rowCount="4">
-
-        <Button android:text="1" style="@style/KeypadButton" />
-        <Button android:text="2" style="@style/KeypadButton" />
-        <Button android:text="3" style="@style/KeypadButton" />
-        <Button android:text="4" style="@style/KeypadButton" />
-        <Button android:text="5" style="@style/KeypadButton" />
-        <Button android:text="6" style="@style/KeypadButton" />
-        <Button android:text="7" style="@style/KeypadButton" />
-        <Button android:text="8" style="@style/KeypadButton" />
-        <Button android:text="9" style="@style/KeypadButton" />
-        <Button android:text="" style="@style/KeypadButton" android:visibility="invisible"/>
-        <Button android:text="0" style="@style/KeypadButton" />
-        <Button android:text="⌫" style="@style/KeypadButton" android:textColor="#FF0000" />
-
-    </GridLayout>
-</LinearLayout>
+</ScrollView>
