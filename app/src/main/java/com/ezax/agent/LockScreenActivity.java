@@ -35,7 +35,6 @@ public class LockScreenActivity extends Activity {
             startLockTask(); 
         }
 
-        // Cara aman daftarin receiver tanpa API baru
         registerReceiver(unlockReceiver, new IntentFilter("UNLOCK_SCREEN_ACTION"));
 
         tvPesan = findViewById(R.id.tv_pesan);

