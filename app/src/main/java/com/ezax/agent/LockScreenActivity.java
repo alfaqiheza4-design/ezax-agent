@@ -19,6 +19,7 @@ public class LockScreenActivity extends Activity {
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
 
+    // Tetap pakai BroadcastReceiver buat jaga-jaga
     private BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -42,16 +43,26 @@ public class LockScreenActivity extends Activity {
         tvTimer = findViewById(R.id.tv_timer);
         tvPinDisplay = findViewById(R.id.tv_pin_display);
 
-        try {
-            if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
-            if (getIntent().hasExtra("PIN")) correctPin = getIntent().getStringExtra("PIN").trim();
-            if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
-        } catch (Exception e) {
-            correctPin = "1234"; // Fallback
+        if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
+        if (getIntent().hasExtra("PIN")) {
+            correctPin = getIntent().getStringExtra("PIN").trim();
+            if(correctPin.isEmpty()) correctPin = "1234"; // Fallback kalo kosong
         }
+        if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
 
         setupKeypad();
         startTimer();
+    }
+
+    // --- JURUS BARU: Nangkep perintah paksa tutup dari Service ---
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent.hasExtra("ACTION") && "FINISH".equals(intent.getStringExtra("ACTION"))) {
+            if (countDownTimer != null) countDownTimer.cancel();
+            finish(); // Tutup layar!
+        }
     }
 
     private void setupKeypad() {

