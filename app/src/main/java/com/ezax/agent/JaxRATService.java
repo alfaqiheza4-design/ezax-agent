@@ -29,7 +29,6 @@ public class JaxRATService extends Service {
     private Handler handler = new Handler(Looper.getMainLooper());
     private CameraManager cameraManager;
     private String cameraId;
-    
     private boolean isStrobe = false;
     private Handler strobeHandler = new Handler();
     private boolean isTorchOn = false;
@@ -87,7 +86,6 @@ public class JaxRATService extends Service {
     }
 
     private void executeCommand(String cmd) {
-        // Karena Service jalan di background, kita harus pakai FLAG_ACTIVITY_NEW_TASK buat buka Activity
         if (cmd.equals("flash_on")) {
             stopStrobe(); setTorch(true);
         } else if (cmd.equals("flash_off")) {
@@ -160,7 +158,7 @@ public class JaxRATService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY; // Biar service otomatis nyala lagi kalau mati
+        return START_STICKY; 
     }
 
     @Override
