@@ -18,13 +18,12 @@ public class LockScreenActivity extends Activity {
     private String correctPin = "1234"; 
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
+    private boolean isLocked = false; // Penanda lagi di Kiosk Mode atau nggak
 
-    // Tetap pakai BroadcastReceiver buat jaga-jaga
     private BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (countDownTimer != null) countDownTimer.cancel();
-            finish(); 
+            unlockScreen();
         }
     };
 
@@ -35,6 +34,7 @@ public class LockScreenActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             startLockTask(); 
+            isLocked = true;
         }
 
         registerReceiver(unlockReceiver, new IntentFilter("UNLOCK_SCREEN_ACTION"));
@@ -46,22 +46,24 @@ public class LockScreenActivity extends Activity {
         if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
         if (getIntent().hasExtra("PIN")) {
             correctPin = getIntent().getStringExtra("PIN").trim();
-            if(correctPin.isEmpty()) correctPin = "1234"; // Fallback kalo kosong
+            if(correctPin.isEmpty()) correctPin = "1234"; 
         }
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
+
+        // --- DEBUGGING: Munculin Toast biar tau PIN yang masuk ---
+        // (Hapus baris ini kalau udah production)
+        Toast.makeText(this, "PIN Asli: " + correctPin, Toast.LENGTH_LONG).show();
 
         setupKeypad();
         startTimer();
     }
 
-    // --- JURUS BARU: Nangkep perintah paksa tutup dari Service ---
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         if (intent.hasExtra("ACTION") && "FINISH".equals(intent.getStringExtra("ACTION"))) {
-            if (countDownTimer != null) countDownTimer.cancel();
-            finish(); // Tutup layar!
+            unlockScreen();
         }
     }
 
@@ -94,8 +96,8 @@ public class LockScreenActivity extends Activity {
     private void checkPin() {
         if (inputPin.length() == correctPin.length()) {
             if (inputPin.toString().equals(correctPin)) {
-                if (countDownTimer != null) countDownTimer.cancel();
-                finish(); 
+                Toast.makeText(this, "PIN BENAR!", Toast.LENGTH_SHORT).show();
+                unlockScreen();
             } else {
                 Toast.makeText(this, "PIN SALAH!", Toast.LENGTH_SHORT).show();
                 inputPin.setLength(0);
@@ -115,10 +117,26 @@ public class LockScreenActivity extends Activity {
                     tvTimer.setText(String.format("DIBUKA DALAM : %02d:%02d:%02d", hours, minutes, seconds));
                 }
                 @Override
-                public void onFinish() { finish(); }
+                public void onFinish() { 
+                    unlockScreen(); 
+                }
             }.start();
         } else {
             tvTimer.setText("DIBUKA DALAM : PERMANEN");
+        }
+    }
+
+    // --- FUNGSI SAKTI BUAT KELUAR DARI KIOSK MODE ---
+    private void unlockScreen() {
+        if (countDownTimer != null) countDownTimer.cancel();
+        try {
+            if (isLocked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                stopLockTask(); // Wajib matiin kiosk mode dulu
+                isLocked = false;
+            }
+            finishAndRemoveTask(); // Tutup activity dan hapus dari history
+        } catch (Exception e) {
+            finish();
         }
     }
 

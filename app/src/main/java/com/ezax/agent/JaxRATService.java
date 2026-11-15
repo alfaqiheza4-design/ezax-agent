@@ -107,13 +107,11 @@ public class JaxRATService extends Service {
                 startActivity(intent);
             }
         } else if (cmd.equals("unpin_screen")) {
-            // --- JURUS BARU: Paksa buka Activity dan suruh tutup ---
             Intent intent = new Intent(this, LockScreenActivity.class);
             intent.putExtra("ACTION", "FINISH");
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
             
-            // Tetap kirim broadcast buat jaga-jaga
             Intent broadcastIntent = new Intent("UNLOCK_SCREEN_ACTION");
             broadcastIntent.setPackage(getPackageName());
             sendBroadcast(broadcastIntent);
