@@ -12,19 +12,39 @@
         android:padding="16dp"
         android:gravity="center_horizontal">
 
-        <!-- Judul: DEVICE LOCKED + Tengkorak -->
-        <TextView
+        <!-- Judul: Tengkorak Kiri - Teks - Tengkorak Kanan (Biar sejajar) -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="💀 DEVICE LOCKED 💀"
-            android:textColor="#FFFFFF"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:fontFamily="monospace"
+            android:orientation="horizontal"
             android:gravity="center"
-            android:letterSpacing="0.1"
             android:layout_marginTop="80dp"
-            android:layout_marginBottom="15dp" />
+            android:layout_marginBottom="15dp">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💀"
+                android:textSize="24sp"
+                android:layout_marginEnd="10dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DEVICE LOCKED"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💀"
+                android:textSize="24sp"
+                android:layout_marginStart="10dp" />
+        </LinearLayout>
 
         <!-- Pesan Custom -->
         <TextView
@@ -49,7 +69,7 @@
             android:fontFamily="monospace"
             android:layout_marginBottom="30dp" />
 
-        <!-- Kotak PIN (Udah dikecilin lebarnya biar gak kepanjangan) -->
+        <!-- Kotak PIN -->
         <TextView
             android:id="@+id/tv_pin_display"
             android:layout_width="260dp"
