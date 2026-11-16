@@ -5,9 +5,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -18,7 +21,10 @@ public class LockScreenActivity extends Activity {
     private String correctPin = "1234"; 
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
-    private boolean isLocked = false; // Penanda lagi di Kiosk Mode atau nggak
+    private boolean isLocked = false; 
+    
+    private MediaPlayer mediaPlayer;
+    private Vibrator vibrator;
 
     private BroadcastReceiver unlockReceiver = new BroadcastReceiver() {
         @Override
@@ -43,6 +49,8 @@ public class LockScreenActivity extends Activity {
         tvTimer = findViewById(R.id.tv_timer);
         tvPinDisplay = findViewById(R.id.tv_pin_display);
 
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+
         if (getIntent().hasExtra("PESAN")) tvPesan.setText(getIntent().getStringExtra("PESAN"));
         if (getIntent().hasExtra("PIN")) {
             correctPin = getIntent().getStringExtra("PIN").trim();
@@ -50,8 +58,41 @@ public class LockScreenActivity extends Activity {
         }
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
 
+        // --- LOGIKA SUARA HOROR ---
+        String suara = getIntent().getStringExtra("SUARA");
+        if (suara != null && suara.equals("horor")) {
+            putarSuaraHoror();
+        }
+
+        // --- LOGIKA GETAR SAAT LAYAR MUNCUL ---
+        getarSekali();
+
         setupKeypad();
         startTimer();
+    }
+
+    private void putarSuaraHoror() {
+        try {
+            mediaPlayer = MediaPlayer.create(this, R.raw.suara_horor);
+            if (mediaPlayer != null) {
+                mediaPlayer.setLooping(false); // Main sekali aja
+                mediaPlayer.start();
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "File suara tidak ditemukan!", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void getarSekali() {
+        try {
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(500);
+                }
+            }
+        } catch (Exception e) { }
     }
 
     @Override
@@ -96,6 +137,7 @@ public class LockScreenActivity extends Activity {
                 unlockScreen();
             } else {
                 Toast.makeText(this, "PIN SALAH!", Toast.LENGTH_SHORT).show();
+                getarSekali(); // Getar pas PIN salah
                 inputPin.setLength(0);
                 updatePinDisplay();
             }
@@ -122,15 +164,23 @@ public class LockScreenActivity extends Activity {
         }
     }
 
-    // --- FUNGSI SAKTI BUAT KELUAR DARI KIOSK MODE ---
     private void unlockScreen() {
         if (countDownTimer != null) countDownTimer.cancel();
+        
+        if (mediaPlayer != null) {
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.stop();
+            }
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+
         try {
             if (isLocked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                stopLockTask(); // Wajib matiin kiosk mode dulu
+                stopLockTask(); 
                 isLocked = false;
             }
-            finishAndRemoveTask(); // Tutup activity dan hapus dari history
+            finishAndRemoveTask(); 
         } catch (Exception e) {
             finish();
         }
@@ -143,6 +193,10 @@ public class LockScreenActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         if (countDownTimer != null) countDownTimer.cancel();
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
         try { unregisterReceiver(unlockReceiver); } catch (Exception e) {}
     }
 }

