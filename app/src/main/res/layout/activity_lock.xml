@@ -59,6 +59,7 @@
             android:layout_marginBottom="30dp" />
 
         <GridLayout
+            android:id="@+id/keypad"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:columnCount="3"
