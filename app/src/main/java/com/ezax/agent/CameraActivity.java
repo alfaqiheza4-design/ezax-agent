@@ -101,7 +101,7 @@ public class CameraActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 // IP DISESUAIKAN DENGAN LAPTOP KAMU
-                String serverUrl = "http://192.168.1.9:5000/api/upload_image/hp_target_1"; 
+                String serverUrl = "http://192.168.1.11:5000/api/upload_image/hp_target_1"; 
                 URL url = new URL(serverUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setDoOutput(true);
