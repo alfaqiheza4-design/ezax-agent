@@ -40,6 +40,7 @@ public class LockScreenActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_lock);
+        startLockTask();
 
         // KIOSK MODE DIMATIKAN AGAR TOMBOL HP BERFUNGSI
         registerReceiver(unlockReceiver, new IntentFilter("UNLOCK_SCREEN_ACTION"));
@@ -157,10 +158,20 @@ public class LockScreenActivity extends Activity {
     }
 
     private void unlockScreen() {
-        if (countDownTimer != null) countDownTimer.cancel();
-        if (mediaPlayer != null) { mediaPlayer.release(); mediaPlayer = null; }
-        finishAndRemoveTask(); 
+    if (countDownTimer != null) countDownTimer.cancel();
+    if (mediaPlayer != null) { 
+        mediaPlayer.release(); 
+        mediaPlayer = null; 
     }
+    
+    try {
+        stopLockTask(); // Pengaman biar gak crash kalau gak lagi di Kiosk Mode
+    } catch (Exception e) {
+        // Abaikan error kalau ternyata gak lagi di Kiosk Mode
+    }
+    
+    finishAndRemoveTask();
+}
 
     @Override
     public void onBackPressed() { }
