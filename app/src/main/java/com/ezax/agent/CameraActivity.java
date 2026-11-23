@@ -17,7 +17,7 @@ public class CameraActivity extends AppCompatActivity {
     private Camera camera;
     private int cameraId = 0;
     private boolean isFront = false;
-    private String serverUrl = "http://192.168.1.14:5000"; // IP KAMU
+    private String serverUrl = "http://192.168.1.17:5000"; // IP KAMU
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
