@@ -40,9 +40,9 @@
             </intent-filter>
         </service>
 
-        <!-- RECEIVER DEVICE ADMIN BARU -->
+        <!-- UBAH NAMA DI SINI -->
         <receiver
-            android:name=".DeviceAdminReceiver"
+            android:name=".JaxAdminReceiver"
             android:permission="android.permission.BIND_DEVICE_ADMIN"
             android:exported="true">
             <meta-data

