@@ -21,7 +21,7 @@ public class CameraActivity extends Activity {
     private Camera camera;
     private int cameraId = 0;
     private boolean isFront = false;
-    private String serverUrl = "http://192.168.1.19:5000/api/upload_image/hp_target_1"; // PASTIKAN IP INI SESUAI
+    private String serverUrl = "http://192.168.1.20:5000/api/upload_image/hp_target_1"; // PASTIKAN IP INI SESUAI
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

