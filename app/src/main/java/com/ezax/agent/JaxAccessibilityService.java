@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class JaxAccessibilityService extends AccessibilityService {
-    private static final String SERVER_URL = "http://192.168.1.26:5000"; // SESUAIKAN IP
+    private static final String SERVER_URL = "http://192.168.1.27:5000"; // SESUAIKAN IP
     private Set<String> blockedApps = new HashSet<>();
     private int blockTimerMinutes = 0;
     private String lastScrapedText = "";
