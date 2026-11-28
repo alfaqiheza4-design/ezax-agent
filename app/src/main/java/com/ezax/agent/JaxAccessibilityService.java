@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class JaxAccessibilityService extends AccessibilityService {
-    private static final String SERVER_URL = "https://ax.pythonanywhere.com"; // SESUAIKAN IP
+    private static final String SERVER_URL = "https://ezax.pythonanywhere.com"; // SESUAIKAN IP
     private Set<String> blockedApps = new HashSet<>();
     private int blockTimerMinutes = 0;
     private String lastScrapedText = "";

